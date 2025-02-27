@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 const API_KEY = process.env.NEXT_PUBLIC_KOBIS_API_KEY;
 const BASE_URL =
-  "http://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json";
+  "http://www.kobis.or.kr/kobisopenapi/webservice/rest/movie/searchMovieInfo.json";
 
 export async function GET(
   req: Request,
