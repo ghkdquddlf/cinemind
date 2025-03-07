@@ -1,3 +1,5 @@
+"use client";
+
 interface ReviewFormProps {
   author: string;
   content: string;

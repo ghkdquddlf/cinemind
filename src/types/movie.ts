@@ -11,4 +11,5 @@ export interface Movie {
   genres?: string[];
   runtime?: number;
   created_at?: string;
+  description?: string;
 }

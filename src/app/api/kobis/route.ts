@@ -31,7 +31,18 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "박스오피스 데이터를 찾을 수 없습니다." }, { status: 404 });
     }
 
-    return NextResponse.json(boxOfficeList);
+    // auto-load API와 동일한 형식으로 응답 반환
+    return NextResponse.json({
+      targetDate,
+      movies: boxOfficeList.map((movie: any) => ({
+        rank: movie.rank,
+        movieCd: movie.movieCd,
+        movieNm: movie.movieNm,
+        openDt: movie.openDt,
+        audiCnt: movie.audiCnt,
+        audiAcc: movie.audiAcc
+      }))
+    });
   } catch (error) {
     console.error("KOBIS API 요청 실패:", error);
     return NextResponse.json({ error: "API 요청 실패" }, { status: 500 });

@@ -1,4 +1,7 @@
+"use client";
+
 import React, { useState } from "react";
+import EditReviewForm from "./EditReviewForm";
 
 interface Review {
   id: string;
@@ -22,6 +25,7 @@ export default function ReviewList({
     [key: string]: string;
   }>({});
   const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
 
   const handleDeleteClick = async (reviewId: string) => {
     const password = deletePasswords[reviewId];
@@ -67,6 +71,19 @@ export default function ReviewList({
     }
   };
 
+  const handleEditClick = (reviewId: string) => {
+    setEditingReviewId(reviewId);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingReviewId(null);
+  };
+
+  const handleReviewUpdated = () => {
+    setEditingReviewId(null);
+    onReviewDeleted(); // 리뷰 목록 새로고침
+  };
+
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">리뷰 목록</h2>
@@ -76,61 +93,81 @@ export default function ReviewList({
         <div className="space-y-4">
           {reviews.map((review) => (
             <div key={review.id} className="border rounded p-4 bg-gray-50">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <span className="font-semibold">{review.author}</span>
-                  <span className="text-sm text-gray-500 ml-2">
-                    {new Date(review.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {deletingReviewId === review.id ? (
-                    <>
-                      <input
-                        type="password"
-                        placeholder="비밀번호"
-                        className="border rounded px-2 py-1 text-sm"
-                        value={deletePasswords[review.id] || ""}
-                        onChange={(e) =>
-                          setDeletePasswords((prev) => ({
-                            ...prev,
-                            [review.id]: e.target.value,
-                          }))
-                        }
-                      />
-                      <button
-                        onClick={() => handleDeleteClick(review.id)}
-                        className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600"
-                      >
-                        확인
-                      </button>
-                      <button
-                        onClick={() => {
-                          setDeletingReviewId(null);
-                          setDeletePasswords((prev) => {
-                            const newPasswords = { ...prev };
-                            delete newPasswords[review.id];
-                            return newPasswords;
-                          });
-                        }}
-                        className="bg-gray-500 text-white px-2 py-1 rounded text-sm hover:bg-gray-600"
-                      >
-                        취소
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => setDeletingReviewId(review.id)}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                    >
-                      삭제
-                    </button>
-                  )}
-                </div>
-              </div>
-              <p className="text-gray-700 whitespace-pre-wrap">
-                {review.content}
-              </p>
+              {editingReviewId === review.id ? (
+                <EditReviewForm
+                  reviewId={review.id}
+                  initialContent={review.content}
+                  movieId={movieId}
+                  onCancel={handleCancelEdit}
+                  onReviewUpdated={handleReviewUpdated}
+                />
+              ) : (
+                <>
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <span className="font-semibold">{review.author}</span>
+                      <span className="text-sm text-gray-500 ml-2">
+                        {new Date(review.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {deletingReviewId === review.id ? (
+                        <>
+                          <input
+                            type="password"
+                            placeholder="비밀번호"
+                            className="border rounded px-2 py-1 text-sm"
+                            value={deletePasswords[review.id] || ""}
+                            onChange={(e) =>
+                              setDeletePasswords((prev) => ({
+                                ...prev,
+                                [review.id]: e.target.value,
+                              }))
+                            }
+                          />
+                          <button
+                            onClick={() => handleDeleteClick(review.id)}
+                            className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600"
+                          >
+                            확인
+                          </button>
+                          <button
+                            onClick={() => {
+                              setDeletingReviewId(null);
+                              setDeletePasswords((prev) => {
+                                const newPasswords = { ...prev };
+                                delete newPasswords[review.id];
+                                return newPasswords;
+                              });
+                            }}
+                            className="bg-gray-500 text-white px-2 py-1 rounded text-sm hover:bg-gray-600"
+                          >
+                            취소
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleEditClick(review.id)}
+                            className="text-blue-500 hover:text-blue-700 text-sm"
+                          >
+                            수정
+                          </button>
+                          <button
+                            onClick={() => setDeletingReviewId(review.id)}
+                            className="text-red-500 hover:text-red-700 text-sm"
+                          >
+                            삭제
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-gray-700 whitespace-pre-wrap">
+                    {review.content}
+                  </p>
+                </>
+              )}
             </div>
           ))}
         </div>
