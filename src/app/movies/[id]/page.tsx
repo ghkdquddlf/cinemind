@@ -1,16 +1,22 @@
 // src/app/movies/[id]/page.tsx
 import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
 import MovieInfo from "./components/MovieInfo";
 import ReviewForm from "./components/ReviewForm";
 import ReviewList from "./components/ReviewList";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { notFound } from "next/navigation";
 
 // 페이지 메타데이터 동적 생성
 export async function generateMetadata({ params }: { params: { id: string } }) {
-  const supabase = createClient();
+  // 빌드 시간에는 cookies()를 사용할 수 없으므로 직접 Supabase 클라이언트 생성
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  // @supabase/supabase-js에서 createClient 가져오기
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   const { data: movie } = await supabase
     .from("movies")
     .select("*")
@@ -34,7 +40,14 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 
 // 정적 경로 생성 (SSG)
 export async function generateStaticParams() {
-  const supabase = createClient();
+  // 빌드 시간에는 cookies()를 사용할 수 없으므로 직접 Supabase 클라이언트 생성
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  // @supabase/supabase-js에서 createClient 가져오기
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   const { data: movies } = await supabase
     .from("movies")
     .select("id")
@@ -109,7 +122,13 @@ export default async function MoviePage({
 }: {
   params: { id: string };
 }) {
-  const supabase = createClient();
+  // 서버 컴포넌트에서는 cookies()를 사용할 수 있지만, 일관성을 위해 동일한 방식 사용
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  // @supabase/supabase-js에서 createClient 가져오기
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
   // 영화 데이터 가져오기
   const { data: movie, error } = await supabase
