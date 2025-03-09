@@ -3,25 +3,76 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import type { Movie } from "@/types/movie";
+import { useAuth } from "@/lib/hooks/useAuth";
+import {
+  addToFavorites,
+  removeFromFavorites,
+  isFavorite,
+} from "@/lib/favorites";
 
 interface MovieInfoProps {
   movie: Movie;
-  favorite: boolean;
-  loading: boolean;
-  onToggleFavorite: () => void;
+  favorite?: boolean;
+  loading?: boolean;
+  onToggleFavorite?: () => void;
 }
 
 export default function MovieInfo({
   movie,
-  favorite,
-  loading,
+  favorite: propFavorite,
+  loading: propLoading,
   onToggleFavorite,
 }: MovieInfoProps) {
   const [isClient, setIsClient] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const [favorite, setFavorite] = useState(propFavorite || false);
+  const [loading, setLoading] = useState(propLoading || false);
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+
+    // 외부에서 favorite 상태를 제공하지 않는 경우 직접 확인
+    if (propFavorite === undefined && isAuthenticated) {
+      checkFavoriteStatus();
+    }
+  }, [isAuthenticated]);
+
+  const checkFavoriteStatus = async () => {
+    try {
+      const isMovieFavorite = await isFavorite(movie.id.toString());
+      setFavorite(isMovieFavorite);
+    } catch (error) {
+      console.error("Error checking favorite status:", error);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!isAuthenticated) {
+      alert("즐겨찾기 기능을 사용하려면 로그인이 필요합니다.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      if (favorite) {
+        await removeFromFavorites(movie.id.toString());
+        setFavorite(false);
+      } else {
+        await addToFavorites(movie.id.toString());
+        setFavorite(true);
+      }
+
+      // 외부에서 제공된 핸들러가 있으면 호출
+      if (onToggleFavorite) {
+        onToggleFavorite();
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      alert(error instanceof Error ? error.message : "오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="mb-8">
@@ -47,12 +98,13 @@ export default function MovieInfo({
           <div className="flex justify-between items-start mb-6">
             <h1 className="text-4xl font-bold">{movie.title}</h1>
             <button
-              onClick={onToggleFavorite}
+              onClick={handleToggleFavorite}
               disabled={loading}
-              className={`px-4 py-2 rounded-lg flex items-center gap-2 ${favorite
-                ? "bg-yellow-500 hover:bg-yellow-600"
-                : "bg-gray-200 hover:bg-gray-300"
-                } transition-colors`}
+              className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                favorite
+                  ? "bg-yellow-500 hover:bg-yellow-600"
+                  : "bg-gray-200 hover:bg-gray-300"
+              } transition-colors`}
             >
               <span className="text-xl">{favorite ? "★" : "☆"}</span>
               {loading ? "처리 중..." : favorite ? "즐겨찾기 해제" : "즐겨찾기"}

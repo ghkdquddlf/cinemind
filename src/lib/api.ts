@@ -3,7 +3,8 @@ import type { Movie } from "@/types/movie";
 const KOBIS_API_KEY = process.env.NEXT_PUBLIC_KOBIS_API_KEY;
 const KOBIS_BASE_URL = "http://www.kobis.or.kr/kobisopenapi/webservice/rest";
 const KMDB_API_KEY = process.env.NEXT_PUBLIC_KMDB_API_KEY;
-const KMDB_BASE_URL = "http://api.koreafilm.or.kr/openapi-data2/wisenut/search_api/search_json2.jsp";
+const KMDB_BASE_URL =
+  "http://api.koreafilm.or.kr/openapi-data2/wisenut/search_api/search_json2.jsp";
 
 interface KobisMovieListResponse {
   boxOfficeResult: {
@@ -59,6 +60,9 @@ interface KMDbResponse {
       posters: string;
       stlls: string;
       repRlsDate: string;
+      posterUrl?: string;
+      plot?: string;
+      [key: string]: unknown;
     }>;
   };
 }
@@ -144,7 +148,9 @@ export async function getLatestMovies(): Promise<Movie[]> {
 }
 
 // 영화진흥위원회 API를 통해 박스오피스 데이터 가져오기
-export async function getBoxOfficeData(targetDate?: string): Promise<any[]> {
+export async function getBoxOfficeData(
+  targetDate?: string
+): Promise<KobisMovieListResponse["boxOfficeResult"]["dailyBoxOfficeList"]> {
   try {
     if (!KOBIS_API_KEY) {
       throw new Error("KOBIS API 키가 설정되지 않았습니다.");
@@ -167,7 +173,8 @@ export async function getBoxOfficeData(targetDate?: string): Promise<any[]> {
       throw new Error(`박스오피스 API 요청 실패: ${errorText}`);
     }
 
-    const boxOfficeData: KobisMovieListResponse = await boxOfficeResponse.json();
+    const boxOfficeData: KobisMovieListResponse =
+      await boxOfficeResponse.json();
 
     if (!boxOfficeData.boxOfficeResult?.dailyBoxOfficeList) {
       throw new Error("박스오피스 데이터 형식이 올바르지 않습니다.");
@@ -181,7 +188,9 @@ export async function getBoxOfficeData(targetDate?: string): Promise<any[]> {
 }
 
 // 영화진흥위원회 API를 통해 영화 상세 정보 가져오기
-export async function getKobisMovieDetail(movieCd: string): Promise<any> {
+export async function getKobisMovieDetail(
+  movieCd: string
+): Promise<KobisMovieInfoResponse["movieInfoResult"]["movieInfo"]> {
   try {
     if (!KOBIS_API_KEY) {
       throw new Error("KOBIS API 키가 설정되지 않았습니다.");
@@ -209,7 +218,9 @@ export async function getKobisMovieDetail(movieCd: string): Promise<any> {
 }
 
 // 한국영상자료원 KMDb API를 통해 영화 정보 검색
-export async function searchKMDbMovies(query: string): Promise<any[]> {
+export async function searchKMDbMovies(
+  query: string
+): Promise<KMDbResponse["Data"]["Result"]> {
   try {
     if (!KMDB_API_KEY) {
       throw new Error("KMDb API 키가 설정되지 않았습니다.");
@@ -219,34 +230,43 @@ export async function searchKMDbMovies(query: string): Promise<any[]> {
 
     // API 요청 파라미터 추가 및 개선
     const params = new URLSearchParams({
-      collection: 'kmdb_new2',
-      detail: 'Y',
+      collection: "kmdb_new2",
+      detail: "Y",
       title: query,
       ServiceKey: KMDB_API_KEY,
-      listCount: '100'  // 결과 수 증가
+      listCount: "100", // 결과 수 증가
     });
 
     const searchUrl = `${KMDB_BASE_URL}?${params.toString()}`;
     console.log(`[searchKMDbMovies] API URL: ${searchUrl}`);
 
     const response = await fetch(searchUrl, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Accept': 'application/json'
-      }
+        Accept: "application/json",
+      },
     });
 
-    console.log(`[searchKMDbMovies] API 응답 상태: ${response.status} ${response.statusText}`);
+    console.log(
+      `[searchKMDbMovies] API 응답 상태: ${response.status} ${response.statusText}`
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[searchKMDbMovies] API 응답 오류: ${response.status} ${response.statusText}`);
+      console.error(
+        `[searchKMDbMovies] API 응답 오류: ${response.status} ${response.statusText}`
+      );
       console.error(`[searchKMDbMovies] 오류 내용: ${errorText}`);
       throw new Error(`KMDb 검색 API 요청 실패: ${errorText}`);
     }
 
     const responseText = await response.text();
-    console.log(`[searchKMDbMovies] API 응답 텍스트 (처음 200자): ${responseText.substring(0, 200)}...`);
+    console.log(
+      `[searchKMDbMovies] API 응답 텍스트 (처음 200자): ${responseText.substring(
+        0,
+        200
+      )}...`
+    );
 
     let data;
     try {
@@ -284,46 +304,70 @@ export async function searchKMDbMovies(query: string): Promise<any[]> {
       const firstResult = results[0];
       console.log(`[searchKMDbMovies] 첫 번째 결과:`, {
         title: firstResult.title,
-        posters: firstResult.posters || '없음',
-        DOCID: firstResult.DOCID || '없음'
+        posters: firstResult.posters || "없음",
+        DOCID: firstResult.DOCID || "없음",
       });
 
       // 포스터 URL 형식 자세히 분석
       if (firstResult.posters) {
-        console.log(`[searchKMDbMovies] 포스터 문자열 길이: ${firstResult.posters.length}`);
-        console.log(`[searchKMDbMovies] 포스터 문자열 전체: ${firstResult.posters}`);
+        console.log(
+          `[searchKMDbMovies] 포스터 문자열 길이: ${firstResult.posters.length}`
+        );
+        console.log(
+          `[searchKMDbMovies] 포스터 문자열 전체: ${firstResult.posters}`
+        );
 
         const posterUrls = firstResult.posters.split("|");
         console.log(`[searchKMDbMovies] 포스터 URL 개수: ${posterUrls.length}`);
 
         if (posterUrls.length > 0) {
           let firstPosterUrl = posterUrls[0].trim();
-          console.log(`[searchKMDbMovies] 첫 번째 포스터 URL (원본): ${firstPosterUrl || '빈 문자열'}`);
+          console.log(
+            `[searchKMDbMovies] 첫 번째 포스터 URL (원본): ${
+              firstPosterUrl || "빈 문자열"
+            }`
+          );
 
           // URL이 http:// 또는 https://로 시작하는지 확인
-          if (firstPosterUrl && !firstPosterUrl.startsWith('http://') && !firstPosterUrl.startsWith('https://')) {
+          if (
+            firstPosterUrl &&
+            !firstPosterUrl.startsWith("http://") &&
+            !firstPosterUrl.startsWith("https://")
+          ) {
             firstPosterUrl = `https://${firstPosterUrl}`;
-            console.log(`[searchKMDbMovies] 첫 번째 포스터 URL (수정): ${firstPosterUrl}`);
+            console.log(
+              `[searchKMDbMovies] 첫 번째 포스터 URL (수정): ${firstPosterUrl}`
+            );
           }
 
-          // URL이 유효한지 확인
+          // URL 유효성 검사
           try {
             new URL(firstPosterUrl);
             console.log(`[searchKMDbMovies] 유효한 URL 형식입니다.`);
-          } catch (e: any) {
-            console.log(`[searchKMDbMovies] 유효하지 않은 URL 형식입니다: ${e.message}`);
-            firstPosterUrl = ''; // 유효하지 않은 URL은 빈 문자열로 설정
+          } catch (e) {
+            console.log(
+              `[searchKMDbMovies] 유효하지 않은 URL 형식입니다: ${
+                e instanceof Error ? e.message : "Unknown error"
+              }`
+            );
+            firstPosterUrl = ""; // 유효하지 않은 URL은 빈 문자열로 설정
           }
         }
       }
     }
 
     // API 응답 형식을 웹 앱에서 사용하기 쉬운 형태로 변환
-    return results.map((movie: any) => {
+    return results.map((movie: KMDbResponse["Data"]["Result"][0]) => {
       // 원본 데이터 로깅
       console.log(`[searchKMDbMovies] 영화 데이터 구조:`, Object.keys(movie));
-      console.log(`[searchKMDbMovies] posterUrl 필드 존재:`, movie.hasOwnProperty('posterUrl'));
-      console.log(`[searchKMDbMovies] posters 필드 존재:`, movie.hasOwnProperty('posters'));
+      console.log(
+        `[searchKMDbMovies] posterUrl 필드 존재:`,
+        movie.hasOwnProperty("posterUrl")
+      );
+      console.log(
+        `[searchKMDbMovies] posters 필드 존재:`,
+        movie.hasOwnProperty("posters")
+      );
 
       if (movie.posterUrl) {
         console.log(`[searchKMDbMovies] posterUrl 값:`, movie.posterUrl);
@@ -337,31 +381,36 @@ export async function searchKMDbMovies(query: string): Promise<any[]> {
 
       // 직접 API 응답 구조 확인
       const allKeys = Object.keys(movie);
-      const posterKeys = allKeys.filter(key => key.toLowerCase().includes('poster'));
+      const posterKeys = allKeys.filter((key) =>
+        key.toLowerCase().includes("poster")
+      );
       console.log(`[searchKMDbMovies] 포스터 관련 키:`, posterKeys);
 
       // 모든 가능한 포스터 필드 확인
       for (const key of posterKeys) {
         const value = movie[key];
-        if (value && typeof value === 'string' && value.trim()) {
+        if (value && typeof value === "string" && value.trim()) {
           console.log(`[searchKMDbMovies] 포스터 필드 ${key}:`, value);
 
           // URL 처리 시도
           let url = value.trim();
 
           // 파이프로 구분된 경우 첫 번째 URL 사용
-          if (url.includes('|')) {
-            const urls = url.split('|').filter(u => u.trim());
+          if (url.includes("|")) {
+            const urls = url.split("|").filter((u) => u.trim());
             if (urls.length > 0) {
               url = urls[0].trim();
-              console.log(`[searchKMDbMovies] 파이프로 구분된 URL 중 첫 번째:`, url);
+              console.log(
+                `[searchKMDbMovies] 파이프로 구분된 URL 중 첫 번째:`,
+                url
+              );
             } else {
               continue; // 유효한 URL이 없으면 다음 필드로
             }
           }
 
           // URL에 프로토콜 추가
-          if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          if (!url.startsWith("http://") && !url.startsWith("https://")) {
             url = `https://${url}`;
             console.log(`[searchKMDbMovies] 프로토콜 추가:`, url);
           }
@@ -370,10 +419,9 @@ export async function searchKMDbMovies(query: string): Promise<any[]> {
           try {
             new URL(url);
             posterUrl = url;
-            console.log(`[searchKMDbMovies] 유효한 포스터 URL (${key}):`, posterUrl);
             break; // 유효한 URL을 찾았으므로 반복 중단
-          } catch (e) {
-            console.log(`[searchKMDbMovies] 유효하지 않은 URL (${key}):`, url, e);
+          } catch (_) {
+            console.log(`[searchKMDbMovies] 유효하지 않은 URL (${key}):`, url);
           }
         }
       }
@@ -383,16 +431,22 @@ export async function searchKMDbMovies(query: string): Promise<any[]> {
         let url = movie.posterUrl.trim();
         if (url) {
           // URL에 프로토콜 추가
-          if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          if (!url.startsWith("http://") && !url.startsWith("https://")) {
             url = `https://${url}`;
           }
           // URL 유효성 검사
           try {
             new URL(url);
             posterUrl = url;
-            console.log(`[searchKMDbMovies] 유효한 포스터 URL (posterUrl):`, posterUrl);
-          } catch (e) {
-            console.log(`[searchKMDbMovies] 유효하지 않은 포스터 URL (posterUrl):`, url);
+            console.log(
+              `[searchKMDbMovies] 유효한 포스터 URL (posterUrl):`,
+              posterUrl
+            );
+          } catch (_) {
+            console.log(
+              `[searchKMDbMovies] 유효하지 않은 포스터 URL (posterUrl):`,
+              url
+            );
           }
         }
       }
@@ -403,16 +457,22 @@ export async function searchKMDbMovies(query: string): Promise<any[]> {
         if (urls.length > 0 && urls[0].trim()) {
           let url = urls[0].trim();
           // URL에 프로토콜 추가
-          if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          if (!url.startsWith("http://") && !url.startsWith("https://")) {
             url = `https://${url}`;
           }
           // URL 유효성 검사
           try {
             new URL(url);
             posterUrl = url;
-            console.log(`[searchKMDbMovies] 유효한 포스터 URL (posters 필드):`, posterUrl);
-          } catch (e) {
-            console.log(`[searchKMDbMovies] 유효하지 않은 포스터 URL (posters 필드):`, url);
+            console.log(
+              `[searchKMDbMovies] 유효한 포스터 URL (posters 필드):`,
+              posterUrl
+            );
+          } catch (_) {
+            console.log(
+              `[searchKMDbMovies] 유효하지 않은 포스터 URL (posters 필드):`,
+              url
+            );
           }
         }
       }
@@ -420,18 +480,30 @@ export async function searchKMDbMovies(query: string): Promise<any[]> {
       // 제목에서 !HS, !HE 같은 태그 제거
       let cleanTitle = movie.title || "";
       cleanTitle = cleanTitle.replace(/!HS|!HE/g, "").trim();
-      console.log(`[searchKMDbMovies] 원본 제목: "${movie.title}", 정제된 제목: "${cleanTitle}"`);
+      console.log(
+        `[searchKMDbMovies] 원본 제목: "${movie.title}", 정제된 제목: "${cleanTitle}"`
+      );
 
       // 줄거리 처리
       let plotText = "";
       if (movie.plot) {
         // plot 필드가 직접 문자열로 제공되는 경우
         plotText = movie.plot;
-        console.log(`[searchKMDbMovies] 줄거리(plot 필드): ${plotText.substring(0, 30)}...`);
+        console.log(
+          `[searchKMDbMovies] 줄거리(plot 필드): ${plotText.substring(
+            0,
+            30
+          )}...`
+        );
       } else if (movie.plots?.plot?.[0]?.plotText) {
         // plots.plot[].plotText 구조로 제공되는 경우
         plotText = movie.plots.plot[0].plotText;
-        console.log(`[searchKMDbMovies] 줄거리(plots.plot[].plotText): ${plotText.substring(0, 30)}...`);
+        console.log(
+          `[searchKMDbMovies] 줄거리(plots.plot[].plotText): ${plotText.substring(
+            0,
+            30
+          )}...`
+        );
       }
 
       return {
@@ -440,14 +512,17 @@ export async function searchKMDbMovies(query: string): Promise<any[]> {
         titleEng: movie.titleEng,
         prodYear: movie.prodYear,
         director: movie.directors?.director?.[0]?.directorNm || "",
-        actors: movie.actors?.actor?.slice(0, 5).map((a: any) => a.actorNm) || [],
+        actors:
+          movie.actors?.actor
+            ?.slice(0, 5)
+            .map((a: { actorNm: string }) => a.actorNm) || [],
         runtime: movie.runtime,
         rating: movie.rating,
         genre: movie.genre,
         plot: plotText,
         poster: posterUrl,
         releaseDate: movie.repRlsDate,
-        DOCID: movie.DOCID
+        DOCID: movie.DOCID,
       };
     });
   } catch (error) {
@@ -457,7 +532,9 @@ export async function searchKMDbMovies(query: string): Promise<any[]> {
 }
 
 // 한국영상자료원 KMDb API를 통해 영화 상세 정보 가져오기
-export async function getKMDbMovieDetail(movieId: string): Promise<any> {
+export async function getKMDbMovieDetail(
+  movieId: string
+): Promise<KMDbResponse["Data"]["Result"][0]> {
   try {
     if (!KMDB_API_KEY) {
       throw new Error("KMDb API 키가 설정되지 않았습니다.");
@@ -485,7 +562,10 @@ export async function getKMDbMovieDetail(movieId: string): Promise<any> {
 }
 
 // 영화진흥위원회 API와 한국영상자료원 KMDb API를 결합하여 완전한 영화 정보 가져오기
-export async function getCompleteMovieInfo(movieCd: string, movieTitle: string): Promise<Movie> {
+export async function getCompleteMovieInfo(
+  movieCd: string,
+  movieTitle: string
+): Promise<Movie> {
   try {
     // 영화진흥위원회 API에서 기본 정보 가져오기
     const kobisInfo = await getKobisMovieDetail(movieCd);
@@ -494,10 +574,12 @@ export async function getCompleteMovieInfo(movieCd: string, movieTitle: string):
     const kmdbResults = await searchKMDbMovies(movieTitle);
 
     // 가장 적합한 결과 찾기 (제목과 개봉년도로 매칭)
-    const releaseYear = kobisInfo.openDt ? kobisInfo.openDt.substring(0, 4) : "";
+    const releaseYear = kobisInfo.openDt
+      ? kobisInfo.openDt.substring(0, 4)
+      : "";
 
     // 매칭 점수 계산 함수
-    const calculateMatchScore = (movie: any) => {
+    const calculateMatchScore = (movie: KMDbResponse["Data"]["Result"][0]) => {
       let score = 0;
 
       // 제목에서 !HS, !HE 같은 태그 제거
@@ -506,11 +588,16 @@ export async function getCompleteMovieInfo(movieCd: string, movieTitle: string):
 
       // 제목 유사도 (공백 제거 후 포함 여부)
       const normalizedTitle = movieTitle.replace(/\s/g, "").toLowerCase();
-      const normalizedKmdbTitle = cleanKmdbTitle.replace(/\s/g, "").toLowerCase();
+      const normalizedKmdbTitle = cleanKmdbTitle
+        .replace(/\s/g, "")
+        .toLowerCase();
 
       if (normalizedKmdbTitle === normalizedTitle) {
         score += 5; // 완전 일치
-      } else if (normalizedKmdbTitle.includes(normalizedTitle) || normalizedTitle.includes(normalizedKmdbTitle)) {
+      } else if (
+        normalizedKmdbTitle.includes(normalizedTitle) ||
+        normalizedTitle.includes(normalizedKmdbTitle)
+      ) {
         score += 3; // 부분 일치
       }
 
@@ -549,7 +636,8 @@ export async function getCompleteMovieInfo(movieCd: string, movieTitle: string):
       title: kobisInfo.movieNm,
       original_title: kobisInfo.movieNmEn || undefined,
       release_date: kobisInfo.openDt || "",
-      genres: kobisInfo.genres?.map((g: any) => g.genreNm) || [],
+      genres:
+        kobisInfo.genres?.map((g: { genreNm: string }) => g.genreNm) || [],
       runtime: parseInt(kobisInfo.showTm) || undefined,
       created_at: new Date().toISOString(),
     };
@@ -558,7 +646,7 @@ export async function getCompleteMovieInfo(movieCd: string, movieTitle: string):
     if (matchedResult) {
       // 제목에서 !HS, !HE 같은 태그 제거
       if (matchedResult.title) {
-        let cleanTitle = matchedResult.title.replace(/!HS|!HE/g, "").trim();
+        const cleanTitle = matchedResult.title.replace(/!HS|!HE/g, "").trim();
 
         // KOBIS 제목이 없거나 빈 문자열인 경우에만 KMDB 제목 사용
         if (!movie.title || movie.title.trim() === "") {
@@ -571,18 +659,20 @@ export async function getCompleteMovieInfo(movieCd: string, movieTitle: string):
 
       // 직접 API 응답 구조 확인
       const allKeys = Object.keys(matchedResult);
-      const posterKeys = allKeys.filter(key => key.toLowerCase().includes('poster'));
+      const posterKeys = allKeys.filter((key) =>
+        key.toLowerCase().includes("poster")
+      );
 
       // 모든 가능한 포스터 필드 확인
       for (const key of posterKeys) {
         const value = matchedResult[key];
-        if (value && typeof value === 'string' && value.trim()) {
+        if (value && typeof value === "string" && value.trim()) {
           // URL 처리 시도
           let url = value.trim();
 
           // 파이프로 구분된 경우 첫 번째 URL 사용
-          if (url.includes('|')) {
-            const urls = url.split('|').filter((u: string) => u.trim());
+          if (url.includes("|")) {
+            const urls = url.split("|").filter((u: string) => u.trim());
             if (urls.length > 0) {
               url = urls[0].trim();
             } else {
@@ -591,7 +681,7 @@ export async function getCompleteMovieInfo(movieCd: string, movieTitle: string):
           }
 
           // URL에 프로토콜 추가
-          if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          if (!url.startsWith("http://") && !url.startsWith("https://")) {
             url = `https://${url}`;
           }
 
@@ -600,8 +690,9 @@ export async function getCompleteMovieInfo(movieCd: string, movieTitle: string):
             new URL(url);
             posterUrl = url;
             break; // 유효한 URL을 찾았으므로 반복 중단
-          } catch (e: any) {
+          } catch (_) {
             // 유효하지 않은 URL은 무시
+            console.log(`[getCompleteMovieInfo] 유효하지 않은 URL: ${url}`);
           }
         }
       }

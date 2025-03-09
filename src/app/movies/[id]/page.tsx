@@ -1,165 +1,141 @@
 // src/app/movies/[id]/page.tsx
-"use client";
-
-import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
-import type { Movie } from "@/types/movie";
-import {
-  addToFavorites,
-  removeFromFavorites,
-  isFavorite,
-} from "@/lib/favorites";
+import { Suspense } from "react";
+import { createClient } from "@/lib/supabase/server";
 import MovieInfo from "./components/MovieInfo";
 import ReviewForm from "./components/ReviewForm";
 import ReviewList from "./components/ReviewList";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
+import { notFound } from "next/navigation";
 
-interface Review {
-  id: string;
-  author: string;
-  content: string;
-  created_at: string;
+// 페이지 메타데이터 동적 생성
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  const supabase = createClient();
+  const { data: movie } = await supabase
+    .from("movies")
+    .select("*")
+    .eq("id", params.id)
+    .single();
+
+  if (!movie) {
+    return {
+      title: "영화를 찾을 수 없음",
+      description: "요청하신 영화를 찾을 수 없습니다.",
+    };
+  }
+
+  return {
+    title: `${movie.title} - CineMind`,
+    description: movie.overview
+      ? movie.overview.substring(0, 160)
+      : "영화 상세 정보 및 리뷰를 확인하세요.",
+  };
 }
 
-export default function MovieDetailPage() {
-  const params = useParams();
-  const movieId = params.id as string;
+// 정적 경로 생성 (SSG)
+export async function generateStaticParams() {
+  const supabase = createClient();
+  const { data: movies } = await supabase
+    .from("movies")
+    .select("id")
+    .order("created_at", { ascending: false })
+    .limit(20); // 최근 추가된 20개 영화만 정적 생성
 
-  const [movie, setMovie] = useState<Movie | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  return (movies || []).map((movie: { id: number | string }) => ({
+    id: movie.id.toString(),
+  }));
+}
 
-  const [author, setAuthor] = useState("");
-  const [content, setContent] = useState("");
-  const [password, setPassword] = useState("");
+// 페이지 재검증 설정 (ISR)
+export const revalidate = 3600; // 1시간마다 재검증
 
-  const [favorite, setFavorite] = useState(false);
+// 영화 정보 스켈레톤 컴포넌트
+const MovieInfoSkeleton = () => {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="md:w-1/3">
+          <div className="relative aspect-[2/3] w-full">
+            <Skeleton height="100%" />
+          </div>
+        </div>
+        <div className="md:w-2/3">
+          <Skeleton height={36} width="70%" className="mb-4" />
+          <Skeleton height={24} width="50%" className="mb-3" />
+          <Skeleton height={20} width="30%" className="mb-2" />
+          <Skeleton height={20} width="40%" className="mb-2" />
+          <Skeleton height={20} width="35%" className="mb-4" />
+          <Skeleton height={100} className="mb-4" />
+          <Skeleton height={20} width="60%" className="mb-2" />
+          <Skeleton height={20} width="50%" className="mb-2" />
+        </div>
+      </div>
+    </div>
+  );
+};
 
-  const fetchMovieAndReviews = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+// 리뷰 폼 스켈레톤 컴포넌트
+const ReviewFormSkeleton = () => {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+      <Skeleton height={32} width="30%" className="mb-4" />
+      <Skeleton height={100} className="mb-4" />
+      <Skeleton height={40} width="20%" />
+    </div>
+  );
+};
 
-      const movieResponse = await fetch(`/api/movies/${movieId}`);
-      const movieData = await movieResponse.json();
+// 리뷰 목록 스켈레톤 컴포넌트
+const ReviewListSkeleton = () => {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <Skeleton height={32} width="30%" className="mb-4" />
+      {Array(3)
+        .fill(0)
+        .map((_, index) => (
+          <div key={index} className="mb-6 pb-6 border-b last:border-0">
+            <Skeleton height={24} width="40%" className="mb-2" />
+            <Skeleton height={16} width="20%" className="mb-3" />
+            <Skeleton height={60} className="mb-2" />
+            <Skeleton height={16} width="15%" />
+          </div>
+        ))}
+    </div>
+  );
+};
 
-      if (!movieResponse.ok) {
-        throw new Error(
-          movieData.error || "영화 정보를 가져오는데 실패했습니다."
-        );
-      }
+export default async function MoviePage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const supabase = createClient();
 
-      setMovie(movieData.movie);
+  // 영화 데이터 가져오기
+  const { data: movie, error } = await supabase
+    .from("movies")
+    .select("*")
+    .eq("id", params.id)
+    .single();
 
-      const reviewsResponse = await fetch(`/api/movies/${movieId}/reviews`);
-      const reviewsData = await reviewsResponse.json();
-
-      if (!reviewsResponse.ok) {
-        throw new Error(reviewsData.error || "리뷰를 가져오는데 실패했습니다.");
-      }
-
-      setReviews(reviewsData.reviews || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "오류가 발생했습니다.");
-    } finally {
-      setLoading(false);
-    }
-  }, [movieId]);
-
-  const checkFavoriteStatus = useCallback(async () => {
-    try {
-      const isMovieFavorite = await isFavorite(movieId);
-      setFavorite(isMovieFavorite);
-    } catch (error) {
-      console.error("Error checking favorite status:", error);
-    }
-  }, [movieId]);
-
-  useEffect(() => {
-    fetchMovieAndReviews();
-    checkFavoriteStatus();
-  }, [fetchMovieAndReviews, checkFavoriteStatus]);
-
-  const toggleFavorite = async () => {
-    try {
-      setLoading(true);
-      if (favorite) {
-        await removeFromFavorites(movieId);
-        setFavorite(false);
-      } else {
-        await addToFavorites(movieId);
-        setFavorite(true);
-      }
-    } catch (error) {
-      console.error("Error toggling favorite:", error);
-      alert(error instanceof Error ? error.message : "오류가 발생했습니다.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      const response = await fetch(`/api/movies/${movieId}/reviews`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          author,
-          content,
-          password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "리뷰 작성에 실패했습니다.");
-      }
-
-      setAuthor("");
-      setContent("");
-      setPassword("");
-
-      fetchMovieAndReviews();
-
-      alert("리뷰가 등록되었습니다.");
-    } catch (err) {
-      alert(
-        err instanceof Error ? err.message : "리뷰 작성 중 오류가 발생했습니다."
-      );
-    }
-  };
-
-  if (loading) return <div className="p-4">로딩 중...</div>;
-  if (error) return <div className="p-4 text-red-500">{error}</div>;
-  if (!movie) return <div className="p-4">영화를 찾을 수 없습니다.</div>;
+  // 영화가 없으면 404 페이지로 이동
+  if (error || !movie) {
+    notFound();
+  }
 
   return (
     <div className="container mx-auto p-4">
-      <MovieInfo
-        movie={movie}
-        favorite={favorite}
-        loading={loading}
-        onToggleFavorite={toggleFavorite}
-      />
-      <ReviewForm
-        author={author}
-        content={content}
-        password={password}
-        onAuthorChange={setAuthor}
-        onContentChange={setContent}
-        onPasswordChange={setPassword}
-        onSubmit={handleSubmitReview}
-      />
-      <ReviewList
-        reviews={reviews}
-        movieId={movieId}
-        onReviewDeleted={fetchMovieAndReviews}
-      />
+      <Suspense fallback={<MovieInfoSkeleton />}>
+        <MovieInfo movie={movie} />
+      </Suspense>
+
+      <Suspense fallback={<ReviewFormSkeleton />}>
+        <ReviewForm movieId={params.id} />
+      </Suspense>
+
+      <Suspense fallback={<ReviewListSkeleton />}>
+        <ReviewList movieId={params.id} />
+      </Suspense>
     </div>
   );
 }

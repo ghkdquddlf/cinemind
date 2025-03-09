@@ -4,27 +4,52 @@ import { createClient } from "@/lib/supabase/client";
 import { saveMovie } from "@/lib/movies";
 import type { Movie } from "@/types/movie";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    const searchQuery = url.searchParams.get("search") || "";
+    const page = parseInt(url.searchParams.get("page") || "1");
+    const limit = parseInt(url.searchParams.get("limit") || "10");
+    const offset = (page - 1) * limit;
+
     const supabase = createClient();
 
-    // 1. 먼저 KOBIS API에서 최신 영화 데이터를 가져옴
-    const latestMovies = await getLatestMovies();
+    // 먼저 총 개수를 가져옵니다
+    let countQuery = supabase.from("movies").select("id", { count: "exact" });
 
-    // 2. 가져온 데이터를 Supabase에 저장
-    for (const movie of latestMovies) {
-      await saveMovie(movie);
+    // 검색어가 있으면 제목으로 검색
+    if (searchQuery) {
+      countQuery = countQuery.ilike("title", `%${searchQuery}%`);
     }
 
-    // 3. Supabase에서 전체 영화 목록을 조회
-    const { data: movies, error } = await supabase
-      .from("movies")
-      .select("*")
-      .order("release_date", { ascending: false });
+    const { count, error: countError } = await countQuery;
+
+    if (countError) throw countError;
+
+    // 실제 데이터를 가져옵니다
+    let dataQuery = supabase.from("movies").select("*");
+
+    // 검색어가 있으면 제목으로 검색
+    if (searchQuery) {
+      dataQuery = dataQuery.ilike("title", `%${searchQuery}%`);
+    }
+
+    // 최신순으로 정렬하고 페이지네이션 적용
+    const { data: movies, error } = await dataQuery
+      .order("release_date", { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) throw error;
 
-    return NextResponse.json({ movies });
+    return NextResponse.json({
+      movies,
+      pagination: {
+        total: count || 0,
+        page,
+        limit,
+        totalPages: Math.ceil((count || 0) / limit),
+      },
+    });
   } catch (error) {
     console.error("Error in movies API:", error);
     return NextResponse.json(

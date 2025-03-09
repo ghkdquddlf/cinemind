@@ -83,7 +83,8 @@ export async function getFavorites(): Promise<Movie[]> {
           poster_path,
           genres,
           runtime,
-          vote_count
+          vote_count,
+          description
         )
       `
       )

@@ -1,6 +1,7 @@
 // src/app/(home)/components/MovieItem.tsx
 import Link from "next/link";
 import Image from "next/image";
+import { memo, useState } from "react";
 
 interface Movie {
   movieCd: string;
@@ -12,16 +13,27 @@ interface Movie {
   poster_path?: string;
 }
 
-export function MovieItem({ movie }: { movie: Movie }) {
+// 메모이제이션을 적용하여 불필요한 리렌더링 방지
+export const MovieItem = memo(function MovieItem({ movie }: { movie: Movie }) {
+  const [imgError, setImgError] = useState(false);
+  const posterPath = imgError
+    ? "/default-movie-image.jpg"
+    : movie.poster_path || "/default-movie-image.jpg";
+
   return (
     <Link href={`/movies/${movie.movieCd}`}>
       <div className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-[600px] flex flex-col">
         <div className="relative h-[400px]">
           <Image
-            src={movie.poster_path || "/default-movie-image.jpg"}
+            src={posterPath}
             alt={movie.movieNm}
             fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="object-cover"
+            loading="lazy"
+            placeholder="blur"
+            blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+            onError={() => setImgError(true)}
           />
           <div className="absolute top-0 left-0 bg-blue-500 text-white px-3 py-1 rounded-br-lg">
             {movie.rank}위
@@ -34,10 +46,9 @@ export function MovieItem({ movie }: { movie: Movie }) {
           <div className="space-y-1 text-gray-600 mt-auto">
             <p>개봉일: {movie.openDt}</p>
             <p>관객 수: {Number(movie.audiCnt).toLocaleString()}명</p>
-            <p>매출액: {Number(movie.salesAmt).toLocaleString()}원</p>
           </div>
         </div>
       </div>
     </Link>
   );
-}
+});
