@@ -33,6 +33,16 @@ export function useAuth() {
           return;
         }
 
+        // 세션이 있으면 세션 갱신 시도
+        if (sessionData.session) {
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            console.error("Error refreshing session:", refreshError);
+          } else {
+            console.log("Session refreshed successfully");
+          }
+        }
+
         // 사용자 정보 가져오기
         const {
           data: { user },
@@ -62,7 +72,14 @@ export function useAuth() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("Auth state changed:", event, session?.user?.id);
-      setUser(session?.user ?? null);
+
+      // 로그인, 로그아웃, 토큰 갱신 등의 이벤트 처리
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        setUser(session?.user ?? null);
+      } else if (event === "SIGNED_OUT") {
+        setUser(null);
+      }
+
       setLoading(false);
     });
 

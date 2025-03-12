@@ -40,13 +40,12 @@ export function RandomMovies() {
   const [allMovies, setAllMovies] = useState<Movie[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 메모이제이션된 함수로 변경
   const fetchMovies = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const response = await fetch("/api/movies", {
-        next: { revalidate: 3600 }, // 1시간마다 재검증
+        next: { revalidate: 3600 },
       });
       const data = await response.json();
 
@@ -54,19 +53,16 @@ export function RandomMovies() {
         throw new Error(data.error || "영화 데이터를 가져오는데 실패했습니다.");
       }
 
-      // 모든 영화 데이터 저장
       setAllMovies(data.movies);
 
-      // 모든 장르 추출
       const allGenres = new Set<string>();
       data.movies.forEach((movie: Movie) => {
         movie.genres?.forEach((genre) => allGenres.add(genre));
       });
       setGenres(Array.from(allGenres));
 
-      // 영화 목록 섞기
       const shuffledMovies = [...data.movies].sort(() => Math.random() - 0.5);
-      setMovies(shuffledMovies.slice(0, 3)); // 최대 3개만 표시하도록 수정
+      setMovies(shuffledMovies.slice(0, 3));
     } catch (err) {
       setError(err instanceof Error ? err.message : "오류가 발생했습니다.");
     } finally {
@@ -78,7 +74,6 @@ export function RandomMovies() {
     fetchMovies();
   }, [fetchMovies]);
 
-  // 메모이제이션된 함수로 변경
   const handleGenreChange = useCallback(
     (genre: string) => {
       setSelectedGenre(genre);
@@ -92,7 +87,6 @@ export function RandomMovies() {
           );
         }
 
-        // 필터링된 영화 중 랜덤으로 3개 선택 (최대 3개만 표시하도록 수정)
         const shuffledMovies = [...filteredMovies].sort(
           () => Math.random() - 0.5
         );
@@ -106,10 +100,9 @@ export function RandomMovies() {
     [allMovies]
   );
 
-  // 스크롤 버튼 핸들러
   const scrollGenres = (direction: "left" | "right") => {
     if (scrollRef.current) {
-      const scrollAmount = 200; // 스크롤 양
+      const scrollAmount = 200;
       const currentScroll = scrollRef.current.scrollLeft;
       scrollRef.current.scrollTo({
         left:
@@ -121,11 +114,9 @@ export function RandomMovies() {
     }
   };
 
-  // 장르 버튼 메모이제이션
   const genreButtons = useMemo(() => {
     return (
       <div className="relative w-full">
-        {/* 왼쪽 스크롤 버튼 */}
         <button
           onClick={() => scrollGenres("left")}
           className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white bg-opacity-80 rounded-full p-1 shadow-md hover:bg-opacity-100"
@@ -147,7 +138,6 @@ export function RandomMovies() {
           </svg>
         </button>
 
-        {/* 스크롤 가능한 장르 버튼 컨테이너 */}
         <div
           ref={scrollRef}
           className="w-full overflow-x-auto py-2 px-8 scrollbar-hide"
@@ -180,7 +170,6 @@ export function RandomMovies() {
           </div>
         </div>
 
-        {/* 오른쪽 스크롤 버튼 */}
         <button
           onClick={() => scrollGenres("right")}
           className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white bg-opacity-80 rounded-full p-1 shadow-md hover:bg-opacity-100"
@@ -205,7 +194,6 @@ export function RandomMovies() {
     );
   }, [genres, selectedGenre, handleGenreChange]);
 
-  // 로딩 중일 때 스켈레톤 UI 표시
   if (loading && movies.length === 0) {
     return (
       <div className="mt-8">
@@ -214,7 +202,7 @@ export function RandomMovies() {
           <GenreButtonsSkeleton />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {Array(3) // 스켈레톤도 3개만 표시
+          {Array(3)
             .fill(0)
             .map((_, index) => (
               <MovieCardSkeleton key={`skeleton-${index}`} />

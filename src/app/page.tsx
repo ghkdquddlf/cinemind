@@ -5,16 +5,13 @@ import { Suspense } from "react";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 
-// 페이지 메타데이터 설정
 export const metadata = {
   title: "CineMind - 홈",
   description: "최신 영화 정보와 다양한 생각을 공유하세요",
 };
 
-// 페이지 재검증 설정 (ISR)
-export const revalidate = 3600; // 1시간마다 재검증
+export const revalidate = 3600;
 
-// 박스오피스 스켈레톤 컴포넌트
 const BoxOfficeSkeleton = () => {
   return (
     <div className="relative">
@@ -39,7 +36,6 @@ const BoxOfficeSkeleton = () => {
   );
 };
 
-// 장르별 영화 스켈레톤 컴포넌트
 const GenreMoviesSkeleton = () => {
   return (
     <div className="mt-8">
@@ -69,7 +65,6 @@ const GenreMoviesSkeleton = () => {
   );
 };
 
-// 전체 영화 목록 스켈레톤 컴포넌트
 const AllMoviesSkeleton = () => {
   return (
     <div className="mt-12">

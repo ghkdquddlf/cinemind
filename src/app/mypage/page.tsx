@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -16,7 +15,6 @@ import ProfileTab from "./components/ProfileTab";
 
 export default function MyPage() {
   const { user, isAuthenticated, loading } = useAuth();
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>("reviews");
   const [myReviews, setMyReviews] = useState<Review[]>([]);
   const [myReplies, setMyReplies] = useState<Reply[]>([]);
@@ -24,13 +22,6 @@ export default function MyPage() {
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nickname, setNickname] = useState<string>("");
-
-  // 로그인 상태 확인 및 리디렉션
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push("/auth/login?redirect=/mypage");
-    }
-  }, [isAuthenticated, loading, router]);
 
   // 사용자 닉네임 가져오기
   const fetchUserProfile = async () => {
@@ -81,7 +72,7 @@ export default function MyPage() {
       } else {
         console.log("user_id로 조회한 결과:", idData);
 
-        // 영화 정보 별도 조회
+        // 영화 정별도 조회
         if (idData && idData.length > 0) {
           const movieIds = idData.map((review) => review.movie_id);
           const { data: moviesData, error: moviesError } = await supabase
@@ -115,7 +106,7 @@ export default function MyPage() {
       } else {
         console.log("author로 조회한 결과:", authorData);
 
-        // 영화 정보 별도 조회
+        // 영화 정별도 조회
         if (authorData && authorData.length > 0) {
           const movieIds = authorData.map((review) => review.movie_id);
           const { data: moviesData, error: moviesError } = await supabase
@@ -324,11 +315,22 @@ export default function MyPage() {
             return [];
           }
 
+          // 유효한 ID만 필터링
+          const validFavorites = favorites.filter(
+            (id: string | unknown) => id && typeof id === "string"
+          );
+
+          if (validFavorites.length === 0) {
+            console.log("유효한 즐겨찾기 ID가 없습니다.");
+            setFavoriteMovies([]);
+            return [];
+          }
+
           // 영화 ID로 영화 정보 가져오기
           const { data: moviesData, error: moviesError } = await supabase
             .from("movies")
             .select("*")
-            .in("id", favorites);
+            .in("id", validFavorites);
 
           if (moviesError) {
             console.error("즐겨찾기 영화 정보 조회 중 오류:", moviesError);
@@ -355,9 +357,19 @@ export default function MyPage() {
       } else {
         console.log("user_id로 조회한 즐겨찾기 결과:", idData);
 
-        // 영화 정보 별도 조회
+        // 영화 정별도 조회
         if (idData && idData.length > 0) {
-          const movieIds = idData.map((favorite) => favorite.movie_id);
+          const movieIds = idData
+            .map((favorite) => favorite.movie_id)
+            .filter(Boolean);
+
+          // movieIds가 비어있는 경우 처리
+          if (movieIds.length === 0) {
+            console.log("유효한 영화 ID가 없습니다.");
+            setFavoriteMovies([]);
+            return [];
+          }
+
           const { data: moviesData, error: moviesError } = await supabase
             .from("movies")
             .select("*")

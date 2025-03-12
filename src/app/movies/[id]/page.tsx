@@ -9,11 +9,9 @@ import "react-loading-skeleton/dist/skeleton.css";
 
 // 페이지 메타데이터 동적 생성
 export async function generateMetadata({ params }: { params: { id: string } }) {
-  // 빌드 시간에는 cookies()를 사용할 수 없으므로 직접 Supabase 클라이언트 생성
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-  // @supabase/supabase-js에서 createClient 가져오기
   const { createClient } = await import("@supabase/supabase-js");
   const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -40,11 +38,9 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 
 // 정적 경로 생성 (SSG)
 export async function generateStaticParams() {
-  // 빌드 시간에는 cookies()를 사용할 수 없으므로 직접 Supabase 클라이언트 생성
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-  // @supabase/supabase-js에서 createClient 가져오기
   const { createClient } = await import("@supabase/supabase-js");
   const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -52,7 +48,7 @@ export async function generateStaticParams() {
     .from("movies")
     .select("id")
     .order("created_at", { ascending: false })
-    .limit(20); // 최근 추가된 20개 영화만 정적 생성
+    .limit(20);
 
   return (movies || []).map((movie: { id: number | string }) => ({
     id: movie.id.toString(),
@@ -122,22 +118,18 @@ export default async function MoviePage({
 }: {
   params: { id: string };
 }) {
-  // 서버 컴포넌트에서는 cookies()를 사용할 수 있지만, 일관성을 위해 동일한 방식 사용
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-  // @supabase/supabase-js에서 createClient 가져오기
   const { createClient } = await import("@supabase/supabase-js");
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // 영화 데이터 가져오기
   const { data: movie, error } = await supabase
     .from("movies")
     .select("*")
     .eq("id", params.id)
     .single();
 
-  // 영화가 없으면 404 페이지로 이동
   if (error || !movie) {
     notFound();
   }

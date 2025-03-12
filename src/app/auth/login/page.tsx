@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 
@@ -10,7 +9,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [success, setSuccess] = useState(false);
   const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -18,16 +17,28 @@ export default function LoginPage() {
     try {
       setLoading(true);
       setError(null);
+      setSuccess(false);
 
-      const { error } = await supabase.auth.signInWithPassword({
+      // 로그인 시도
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
 
-      router.push("/");
-      router.refresh();
+      console.log("로그인 성공:", data);
+      setSuccess(true);
+
+      // URL에서 redirect 파라미터 확인
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirectPath = searchParams.get("redirect") || "/";
+
+      // 세션 설정을 위한 짧은 지연
+      setTimeout(() => {
+        // 페이지 새로고침 후 리디렉션 (세션 쿠키가 제대로 설정되도록)
+        window.location.href = redirectPath;
+      }, 1000);
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "로그인에 실패했습니다."
@@ -48,6 +59,11 @@ export default function LoginPage() {
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           {error && (
             <div className="bg-red-50 text-red-500 p-4 rounded-md">{error}</div>
+          )}
+          {success && (
+            <div className="bg-green-50 text-green-500 p-4 rounded-md">
+              로그인 성공! 잠시 후 리디렉션됩니다...
+            </div>
           )}
           <div className="rounded-md shadow-sm space-y-4">
             <div>
@@ -85,10 +101,10 @@ export default function LoginPage() {
           <div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || success}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              {loading ? "로그인 중..." : "로그인"}
+              {loading ? "로그인 중..." : success ? "로그인 성공!" : "로그인"}
             </button>
           </div>
 

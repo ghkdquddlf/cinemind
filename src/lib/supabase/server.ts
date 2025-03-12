@@ -10,13 +10,24 @@ export function createClient() {
     {
       cookies: {
         get(name: string) {
-          return cookieStore.get(name)?.value;
+          const cookie = cookieStore.get(name);
+          return cookie?.value;
         },
         set(name: string, value: string, options: Record<string, unknown>) {
-          cookieStore.set({ name, value, ...options });
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch (error) {
+            // 쿠키 설정 중 오류 발생 시 로깅
+            console.error(`Error setting cookie ${name}:`, error);
+          }
         },
         remove(name: string, options: Record<string, unknown>) {
-          cookieStore.set({ name, value: "", ...options });
+          try {
+            cookieStore.set({ name, value: "", ...options });
+          } catch (error) {
+            // 쿠키 제거 중 오류 발생 시 로깅
+            console.error(`Error removing cookie ${name}:`, error);
+          }
         },
       },
     }
