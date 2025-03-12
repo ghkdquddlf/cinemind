@@ -24,60 +24,101 @@ export function useUsers() {
       setLoading(true);
       setError(null);
 
-      // 현재 로그인한 사용자 정보 가져오기
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      // Supabase Auth에서 모든 사용자 가져오기
+      const { data: authUsers, error: authError } =
+        await supabase.auth.admin.listUsers();
 
-      if (userError) {
-        console.error("사용자 정보 가져오기 오류:", userError);
-        throw userError;
-      }
+      if (authError) {
+        // 관리자 API 접근 권한이 없는 경우 일반 사용자 목록 가져오기 시도
+        console.error("관리자 API 접근 오류:", authError);
 
-      if (user) {
-        const email = user.email || "이메일 없음";
-        const userId = user.id;
+        // 대체 방법: user_profiles 테이블에서 사용자 정보 가져오기
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("user_profiles")
+          .select("*");
 
-        // user_profiles 테이블에서 닉네임 정보 가져오기 시도
-        let nickname = getDefaultNickname(email);
+        if (profilesError) {
+          throw new Error(
+            "사용자 프로필 데이터를 가져오는 중 오류가 발생했습니다."
+          );
+        }
 
+        if (profilesData && profilesData.length > 0) {
+          const formattedUsers: User[] = profilesData.map((profile) => ({
+            id: profile.user_id,
+            email: profile.email || "이메일 없음",
+            nickname:
+              profile.nickname || getDefaultNickname(profile.email || ""),
+            created_at: profile.created_at || new Date().toISOString(),
+            last_sign_in_at: null,
+          }));
+
+          setUsers(formattedUsers);
+          setFilteredUsers(formattedUsers);
+        } else {
+          // 현재 로그인한 사용자 정보만 가져오기
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+
+          if (user) {
+            const email = user.email || "이메일 없음";
+            const currentUser: User = {
+              id: user.id,
+              email: email,
+              nickname: getDefaultNickname(email),
+              created_at: user.created_at || new Date().toISOString(),
+              last_sign_in_at: user.last_sign_in_at || null,
+            };
+
+            setUsers([currentUser]);
+            setFilteredUsers([currentUser]);
+          } else {
+            setUsers([]);
+            setFilteredUsers([]);
+            setError("사용자 데이터를 가져올 수 없습니다.");
+          }
+        }
+      } else if (authUsers) {
+        // 관리자 API로 가져온 사용자 목록 처리
+        const userProfiles: Record<string, UserProfile> = {};
+
+        // 사용자 프로필 정보 가져오기
         try {
-          const { data: profileData, error: profileError } = await supabase
+          const { data: profilesData } = await supabase
             .from("user_profiles")
-            .select("*")
-            .eq("user_id", userId)
-            .single();
+            .select("*");
 
-          if (profileError) {
-            console.error("사용자 프로필 가져오기 오류:", profileError);
-          } else if (profileData && profileData.nickname) {
-            const userProfile = profileData as UserProfile;
-            nickname = userProfile.nickname || getDefaultNickname(email);
-            console.log("프로필에서 가져온 닉네임:", nickname);
+          if (profilesData && profilesData.length > 0) {
+            profilesData.forEach((profile) => {
+              userProfiles[profile.user_id] = profile;
+            });
           }
         } catch (profileErr) {
           console.error("프로필 데이터 가져오기 실패:", profileErr);
         }
 
-        // 현재 로그인한 사용자 정보만 표시
-        const currentUser: User = {
-          id: userId,
-          email: email,
-          nickname: nickname,
-          created_at: user.created_at || new Date().toISOString(),
-          last_sign_in_at: user.last_sign_in_at || null,
-        };
+        // 사용자 목록 형식 변환
+        const formattedUsers: User[] = authUsers.users.map((authUser) => {
+          const email = authUser.email || "이메일 없음";
+          const profile = userProfiles[authUser.id];
+          const nickname = profile?.nickname || getDefaultNickname(email);
 
-        setUsers([currentUser]);
-        setFilteredUsers([currentUser]);
-        console.log("현재 로그인한 사용자:", currentUser);
+          return {
+            id: authUser.id,
+            email: email,
+            nickname: nickname,
+            created_at: authUser.created_at || new Date().toISOString(),
+            last_sign_in_at: authUser.last_sign_in_at || null,
+          };
+        });
+
+        setUsers(formattedUsers);
+        setFilteredUsers(formattedUsers);
       } else {
-        // 로그인한 사용자가 없으면 빈 배열 설정
-        console.log("로그인한 사용자가 없습니다.");
         setUsers([]);
         setFilteredUsers([]);
-        setError("로그인한 사용자가 없습니다.");
+        setError("사용자 데이터를 가져올 수 없습니다.");
       }
     } catch (err) {
       console.error("사용자 데이터 가져오기 오류:", err);
@@ -101,8 +142,9 @@ export function useUsers() {
       const lowerCaseQuery = query.toLowerCase();
       const filtered = users.filter(
         (user) =>
-          user.nickname.toLowerCase().includes(lowerCaseQuery) ||
-          user.email.toLowerCase().includes(lowerCaseQuery)
+          (user.nickname &&
+            user.nickname.toLowerCase().includes(lowerCaseQuery)) ||
+          (user.email && user.email.toLowerCase().includes(lowerCaseQuery))
       );
       setFilteredUsers(filtered);
     },

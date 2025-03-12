@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { useState } from "react";
 
 interface ReviewFormProps {
@@ -11,7 +12,6 @@ interface ReviewFormProps {
   onSubmit?: (e: React.FormEvent) => void;
   rating?: number;
   onRatingChange?: (value: number) => void;
-  nickname?: string | null;
 }
 
 export default function ReviewForm({
@@ -21,13 +21,12 @@ export default function ReviewForm({
   onSubmit: propOnSubmit,
   rating: propRating = 5,
   onRatingChange,
-  nickname: propNickname,
 }: ReviewFormProps) {
   const { user, isAuthenticated } = useAuth();
+  const { getUserNickname, loading: profileLoading } = useUserProfile();
   const [content, setContent] = useState(propContent || "");
   const [rating, setRating] = useState(propRating);
   const [loading, setLoading] = useState(false);
-  const userNickname = propNickname || null;
 
   // 내부 상태 변경 핸들러
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -63,10 +62,13 @@ export default function ReviewForm({
     try {
       setLoading(true);
 
+      // 사용자 닉네임 가져오기
+      const userNickname = getUserNickname();
+
       const reviewData = {
         content,
         rating,
-        author: userNickname || user.email || "익명 사용자",
+        author: userNickname,
         user_id: user.id,
       };
 
@@ -100,7 +102,7 @@ export default function ReviewForm({
   };
 
   // 로그인 상태 로딩 중
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">리뷰 작성</h2>
@@ -174,7 +176,7 @@ export default function ReviewForm({
             리뷰 작성
           </button>
           <p className="text-sm text-gray-500">
-            {userNickname || user?.email} 님으로 작성됩니다.
+            {getUserNickname()} 님으로 작성됩니다.
           </p>
         </div>
       </form>

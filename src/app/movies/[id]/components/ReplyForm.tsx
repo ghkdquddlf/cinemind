@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import Link from "next/link";
 
 interface ReplyFormProps {
@@ -17,9 +18,12 @@ export default function ReplyForm({
   onReplyAdded,
   onCancel,
 }: ReplyFormProps) {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { getUserNickname, loading: profileLoading } = useUserProfile();
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const loading = authLoading || profileLoading;
 
   // 로딩 중인 경우
   if (loading) {
@@ -56,11 +60,8 @@ export default function ReplyForm({
     setIsSubmitting(true);
 
     try {
-      // 디버깅을 위한 사용자 정보 출력
-      console.log("답글 작성 - 사용자 정보:", {
-        id: user?.id,
-        email: user?.email,
-      });
+      // 사용자 닉네임 가져오기
+      const userNickname = getUserNickname();
 
       const response = await fetch(
         `/api/movies/${movieId}/reviews/${reviewId}/replies`,
@@ -70,7 +71,7 @@ export default function ReplyForm({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            author: user?.email || "익명 사용자",
+            author: userNickname,
             content,
             user_id: user?.id,
           }),
@@ -113,7 +114,7 @@ export default function ReplyForm({
       </div>
       <div className="flex justify-between items-center">
         <p className="text-sm text-gray-500">
-          {user?.email || "익명 사용자"} 님으로 작성됩니다.
+          {getUserNickname()} 님으로 작성됩니다.
         </p>
         <div className="flex gap-2">
           <button

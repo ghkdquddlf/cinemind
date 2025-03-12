@@ -7,17 +7,29 @@ import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { ThemeToggle } from "../../components/theme-toggle";
 
+// 관리자 이메일 목록
+const ADMIN_EMAILS = ["admin@example.com", "admin@test.com"];
+
 const supabase = createClient();
 
 export default function Header() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+
+      // 관리자 권한 확인
+      if (currentUser?.email && ADMIN_EMAILS.includes(currentUser.email)) {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -43,7 +55,7 @@ export default function Header() {
 
           <div className="flex items-center space-x-2">
             <ThemeToggle />
-            {user && (
+            {user && !isAdmin && (
               <Link
                 href="/mypage"
                 className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium"
@@ -51,12 +63,14 @@ export default function Header() {
                 마이페이지
               </Link>
             )}
-            <Link
-              href="/admin/movies"
-              className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-            >
-              영화 관리
-            </Link>
+            {isAdmin && (
+              <Link
+                href="/admin/movies"
+                className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+              >
+                영화 관리
+              </Link>
+            )}
             {user ? (
               <button
                 onClick={handleLogout}
