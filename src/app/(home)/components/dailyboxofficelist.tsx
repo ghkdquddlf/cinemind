@@ -44,18 +44,6 @@ interface Movie {
   poster_path?: string;
 }
 
-// 박스오피스 데이터 캐싱을 위한 객체
-interface BoxOfficeCache {
-  data: Movie[];
-  timestamp: number;
-  posters: Record<string, string>;
-}
-
-// 메모리 캐시 (세션 간에는 유지되지 않음)
-let boxOfficeCache: BoxOfficeCache | null = null;
-// 캐시 유효 시간 (1시간)
-const CACHE_TTL = 60 * 60 * 1000;
-
 export function MovieList() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,27 +54,12 @@ export function MovieList() {
   const fetchMoviePosters = useCallback(
     async (movies: Movie[]) => {
       try {
-        // 캐시된 포스터 정보 확인
-        const cachedPosters = boxOfficeCache?.posters || {};
-        const moviesToFetch = movies.filter(
-          (movie) => !cachedPosters[movie.movieCd]
-        );
-
-        if (moviesToFetch.length === 0) {
-          // 모든 포스터 정보가 캐시에 있는 경우
-          return movies.map((movie) => ({
-            ...movie,
-            poster_path:
-              cachedPosters[movie.movieCd] || "/default-movie-image.jpg",
-          }));
-        }
-
         // 병렬 처리를 위한 배치 처리 (한 번에 5개씩 처리)
         const batchSize = 5;
         const newPosters: Record<string, string> = {};
 
-        for (let i = 0; i < moviesToFetch.length; i += batchSize) {
-          const batch = moviesToFetch.slice(i, i + batchSize);
+        for (let i = 0; i < movies.length; i += batchSize) {
+          const batch = movies.slice(i, i + batchSize);
           const batchPromises = batch.map(async (movie) => {
             try {
               // Supabase에서 영화 정보 조회
@@ -116,18 +89,10 @@ export function MovieList() {
           await Promise.all(batchPromises);
         }
 
-        // 캐시 업데이트
-        if (boxOfficeCache) {
-          boxOfficeCache.posters = { ...boxOfficeCache.posters, ...newPosters };
-        }
-
         // 모든 영화에 포스터 정보 적용
         return movies.map((movie) => ({
           ...movie,
-          poster_path:
-            newPosters[movie.movieCd] ||
-            cachedPosters[movie.movieCd] ||
-            "/default-movie-image.jpg",
+          poster_path: newPosters[movie.movieCd] || "/default-movie-image.jpg",
         }));
       } catch (err) {
         console.error("포스터 정보 조회 중 오류:", err);
@@ -145,14 +110,6 @@ export function MovieList() {
     try {
       setLoading(true);
       setError(null);
-
-      // 캐시 확인
-      const now = Date.now();
-      if (boxOfficeCache && now - boxOfficeCache.timestamp < CACHE_TTL) {
-        setMovies(boxOfficeCache.data);
-        setLoading(false);
-        return;
-      }
 
       // 데이터만 가져오는 API 호출
       const res = await fetch("/api/kobis", {
@@ -186,18 +143,6 @@ export function MovieList() {
       // Supabase에서 포스터 정보 가져오기
       const moviesWithPosters = await fetchMoviePosters(kobisData);
 
-      // 캐시 업데이트
-      boxOfficeCache = {
-        data: moviesWithPosters,
-        timestamp: now,
-        posters: moviesWithPosters.reduce((acc, movie) => {
-          if (movie.poster_path) {
-            acc[movie.movieCd] = movie.poster_path;
-          }
-          return acc;
-        }, {} as Record<string, string>),
-      };
-
       setMovies(moviesWithPosters);
     } catch (error) {
       console.error("Error fetching movies:", error);
@@ -209,11 +154,6 @@ export function MovieList() {
 
   useEffect(() => {
     fetchMovies();
-
-    // 컴포넌트 언마운트 시 캐시 정리 (선택적)
-    return () => {
-      // 캐시 유지를 위해 정리하지 않음
-    };
   }, [fetchMovies]);
 
   // 오류 발생 시 표시

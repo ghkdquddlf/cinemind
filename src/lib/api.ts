@@ -420,7 +420,7 @@ export async function searchKMDbMovies(
             new URL(url);
             posterUrl = url;
             break; // 유효한 URL을 찾았으므로 반복 중단
-          } catch (_) {
+          } catch {
             console.log(`[searchKMDbMovies] 유효하지 않은 URL (${key}):`, url);
           }
         }
@@ -442,7 +442,7 @@ export async function searchKMDbMovies(
               `[searchKMDbMovies] 유효한 포스터 URL (posterUrl):`,
               posterUrl
             );
-          } catch (_) {
+          } catch {
             console.log(
               `[searchKMDbMovies] 유효하지 않은 포스터 URL (posterUrl):`,
               url
@@ -468,7 +468,7 @@ export async function searchKMDbMovies(
               `[searchKMDbMovies] 유효한 포스터 URL (posters 필드):`,
               posterUrl
             );
-          } catch (_) {
+          } catch {
             console.log(
               `[searchKMDbMovies] 유효하지 않은 포스터 URL (posters 필드):`,
               url
@@ -690,7 +690,7 @@ export async function getCompleteMovieInfo(
             new URL(url);
             posterUrl = url;
             break; // 유효한 URL을 찾았으므로 반복 중단
-          } catch (_) {
+          } catch {
             // 유효하지 않은 URL은 무시
             console.log(`[getCompleteMovieInfo] 유효하지 않은 URL: ${url}`);
           }

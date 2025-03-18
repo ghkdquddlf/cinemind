@@ -31,8 +31,6 @@ export const MovieItem = memo(function MovieItem({ movie }: { movie: Movie }) {
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="object-cover"
             loading="lazy"
-            placeholder="blur"
-            blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
             onError={() => setImgError(true)}
           />
           <div className="absolute top-0 left-0 bg-blue-500 text-white px-3 py-1 rounded-br-lg">
