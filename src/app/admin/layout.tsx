@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
 
 // 관리자 이메일 목록
 const ADMIN_EMAILS = ["admin@example.com", "admin@test.com"];
@@ -76,21 +77,21 @@ export default function AdminLayout({
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-4">관리자 페이지</h1>
         <div className="flex gap-4 mb-6">
-          <a href="/admin/movies" className={getTabStyle(isMoviesActive)}>
+          <Link href="/admin/movies" className={getTabStyle(isMoviesActive)}>
             영화 추가
-          </a>
-          <a
+          </Link>
+          <Link
             href="/admin/movie-list"
             className={getTabStyle(isMovieListActive)}
           >
             영화 목록
-          </a>
-          <a href="/admin/users" className={getTabStyle(isUsersActive)}>
+          </Link>
+          <Link href="/admin/users" className={getTabStyle(isUsersActive)}>
             사용자 관리
-          </a>
-          <a href="/admin/reviews" className={getTabStyle(isReviewsActive)}>
+          </Link>
+          <Link href="/admin/reviews" className={getTabStyle(isReviewsActive)}>
             리뷰 관리
-          </a>
+          </Link>
         </div>
       </div>
       {children}

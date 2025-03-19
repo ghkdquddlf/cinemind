@@ -5,66 +5,119 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useState } from "react";
 
+// 리뷰 폼 컴포넌트의 props 타입 정의
 interface ReviewFormProps {
-  movieId: string;
-  content?: string;
-  onContentChange?: (value: string) => void;
-  onSubmit?: (e: React.FormEvent) => void;
-  rating?: number;
-  onRatingChange?: (value: number) => void;
+  movieId: string; // 영화 ID
+  initialContent?: string; // 초기 리뷰 내용 (수정 시 사용)
+  initialRating?: number; // 초기 평점 (기본값: 5)
+  onSubmitSuccess?: () => void; // 리뷰 제출 성공 시 실행할 콜백
 }
 
+// 로그인이 필요할 때 표시되는 컴포넌트
+const LoginPrompt = () => (
+  <div className="p-4 bg-blue-50 border border-blue-200 rounded">
+    <p className="mb-2">리뷰를 작성하려면 로그인이 필요합니다.</p>
+    <Link
+      href="/auth/login"
+      className="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+    >
+      로그인하러 가기
+    </Link>
+  </div>
+);
+
+// 실제 리뷰 작성 폼 컴포넌트
+const ReviewFormContent = ({
+  content,
+  setContent,
+  rating,
+  setRating,
+  onSubmit,
+  userNickname,
+  isSubmitting,
+}: {
+  content: string;
+  setContent: (content: string) => void;
+  rating: number;
+  setRating: (rating: number) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  userNickname: string;
+  isSubmitting: boolean;
+}) => (
+  <form onSubmit={onSubmit} className="space-y-4">
+    {/* 평점 선택 버튼 그룹 */}
+    <div>
+      <label className="block mb-1">평점</label>
+      <div className="flex space-x-2">
+        {[1, 2, 3, 4, 5].map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setRating(value)}
+            className={`w-10 h-10 rounded-full ${
+              rating >= value
+                ? "bg-yellow-400 text-white"
+                : "bg-gray-200 text-gray-600"
+            }`}
+            disabled={isSubmitting}
+          >
+            {value}
+          </button>
+        ))}
+      </div>
+    </div>
+    {/* 리뷰 내용 입력 영역 */}
+    <div>
+      <label htmlFor="content" className="block mb-1">
+        내용
+      </label>
+      <textarea
+        id="content"
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        required
+        className="w-full p-2 border rounded h-24"
+        placeholder="영화에 대한 리뷰를 작성해주세요."
+        disabled={isSubmitting}
+      />
+    </div>
+    {/* 제출 버튼과 작성자 정보 */}
+    <div className="flex items-center space-x-2">
+      <button
+        type="submit"
+        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? "등록 중..." : "리뷰 작성"}
+      </button>
+      <p className="text-sm text-gray-500">{userNickname} 님으로 작성됩니다.</p>
+    </div>
+  </form>
+);
+
+// 메인 ReviewForm 컴포넌트
 export default function ReviewForm({
   movieId,
-  content: propContent,
-  onContentChange,
-  onSubmit: propOnSubmit,
-  rating: propRating = 5,
-  onRatingChange,
+  initialContent = "",
+  initialRating = 5,
+  onSubmitSuccess,
 }: ReviewFormProps) {
-  const { user, isAuthenticated } = useAuth();
-  const { getUserNickname, loading: profileLoading } = useUserProfile();
-  const [content, setContent] = useState(propContent || "");
-  const [rating, setRating] = useState(propRating);
-  const [loading, setLoading] = useState(false);
+  // 상태 관리
+  const { user, isAuthenticated } = useAuth(); // 사용자 인증 정보
+  const { getUserNickname } = useUserProfile(); // 사용자 프로필 정보
+  const [content, setContent] = useState(initialContent); // 리뷰 내용
+  const [rating, setRating] = useState(initialRating); // 평점
+  const [isSubmitting, setIsSubmitting] = useState(false); // 제출 상태
 
-  // 내부 상태 변경 핸들러
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value;
-    setContent(newContent);
-    if (onContentChange) {
-      onContentChange(newContent);
-    }
-  };
-
-  const handleRatingChange = (newRating: number) => {
-    setRating(newRating);
-    if (onRatingChange) {
-      onRatingChange(newRating);
-    }
-  };
-
+  // 리뷰 제출 처리 함수
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAuthenticated || !user) return;
 
-    if (!isAuthenticated || !user) {
-      alert("리뷰를 작성하려면 로그인이 필요합니다.");
-      return;
-    }
-
-    // 외부에서 제공된 submit 핸들러가 있으면 사용
-    if (propOnSubmit) {
-      propOnSubmit(e);
-      return;
-    }
-
-    // 내부 submit 로직
     try {
-      setLoading(true);
-
-      // 사용자 닉네임 가져오기
+      setIsSubmitting(true);
+      // 리뷰 데이터 준비
       const userNickname = getUserNickname();
-
       const reviewData = {
         content,
         rating,
@@ -72,6 +125,7 @@ export default function ReviewForm({
         user_id: user.id,
       };
 
+      // API 요청 전송
       const response = await fetch(`/api/movies/${movieId}/reviews`, {
         method: "POST",
         headers: {
@@ -86,100 +140,42 @@ export default function ReviewForm({
         throw new Error(data.error || "리뷰 작성에 실패했습니다.");
       }
 
+      // 성공 처리
       setContent("");
       setRating(5);
       alert("리뷰가 등록되었습니다.");
 
-      // 페이지 새로고침
-      window.location.reload();
+      if (onSubmitSuccess) {
+        onSubmitSuccess();
+      } else {
+        window.location.reload();
+      }
     } catch (err) {
       alert(
         err instanceof Error ? err.message : "리뷰 작성 중 오류가 발생했습니다."
       );
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  // 로그인 상태 로딩 중
-  if (loading || profileLoading) {
-    return (
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">리뷰 작성</h2>
-        <div className="p-4 bg-gray-100 rounded">
-          사용자 정보를 불러오는 중...
-        </div>
-      </div>
-    );
-  }
-
-  // 로그인하지 않은 경우
-  if (!isAuthenticated) {
-    return (
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">리뷰 작성</h2>
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded">
-          <p className="mb-2">리뷰를 작성하려면 로그인이 필요합니다.</p>
-          <Link
-            href="/auth/login"
-            className="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            로그인하러 가기
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  // 로그인한 경우
+  // 컴포넌트 렌더링
   return (
     <div className="mb-8">
       <h2 className="text-2xl font-bold mb-4">리뷰 작성</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block mb-1">평점</label>
-          <div className="flex space-x-2">
-            {[1, 2, 3, 4, 5].map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => handleRatingChange(value)}
-                className={`w-10 h-10 rounded-full ${
-                  rating >= value
-                    ? "bg-yellow-400 text-white"
-                    : "bg-gray-200 text-gray-600"
-                }`}
-              >
-                {value}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <label htmlFor="content" className="block mb-1">
-            내용
-          </label>
-          <textarea
-            id="content"
-            value={content}
-            onChange={handleContentChange}
-            required
-            className="w-full p-2 border rounded h-24"
-            placeholder="영화에 대한 리뷰를 작성해주세요."
-          />
-        </div>
-        <div className="flex items-center space-x-2">
-          <button
-            type="submit"
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            리뷰 작성
-          </button>
-          <p className="text-sm text-gray-500">
-            {getUserNickname()} 님으로 작성됩니다.
-          </p>
-        </div>
-      </form>
+      {!isAuthenticated ? (
+        <LoginPrompt />
+      ) : (
+        <ReviewFormContent
+          content={content}
+          setContent={setContent}
+          rating={rating}
+          setRating={setRating}
+          onSubmit={handleSubmit}
+          userNickname={getUserNickname()}
+          isSubmitting={isSubmitting}
+        />
+      )}
     </div>
   );
 }

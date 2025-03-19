@@ -13,27 +13,6 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 
-// 스켈레톤 영화 아이템 컴포넌트
-const MovieItemSkeleton = () => {
-  return (
-    <div className="p-4 h-full">
-      <div className="bg-white rounded-lg shadow-md overflow-hidden h-full flex flex-col">
-        <div className="relative aspect-[2/3] w-full">
-          <Skeleton height="100%" />
-        </div>
-        <div className="p-4 flex-1 flex flex-col">
-          <Skeleton width="80%" height={24} className="mb-2" />
-          <Skeleton width="60%" height={20} className="mb-2" />
-          <Skeleton width="40%" height={16} />
-          <div className="mt-auto pt-4">
-            <Skeleton width="100%" height={36} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 interface Movie {
   movieCd: string;
   rank: string;
@@ -44,111 +23,80 @@ interface Movie {
   poster_path?: string;
 }
 
+const MovieSkeleton = () => (
+  <div className="bg-white rounded-lg shadow-lg overflow-hidden h-[600px] flex flex-col">
+    <div className="relative h-[400px]">
+      <Skeleton height="100%" />
+    </div>
+    <div className="p-4 flex-1 flex flex-col">
+      <Skeleton height={28} className="mb-2" />
+      <div className="space-y-1 mt-auto">
+        <Skeleton height={20} width="60%" />
+        <Skeleton height={20} width="40%" />
+      </div>
+    </div>
+  </div>
+);
+
 export function MovieList() {
   const [movies, setMovies] = useState<Movie[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const supabase = createClient();
 
-  // 메모이제이션된 함수로 변경
   const fetchMoviePosters = useCallback(
     async (movies: Movie[]) => {
-      try {
-        // 병렬 처리를 위한 배치 처리 (한 번에 5개씩 처리)
-        const batchSize = 5;
-        const newPosters: Record<string, string> = {};
+      const moviesWithPosters = [];
 
-        for (let i = 0; i < movies.length; i += batchSize) {
-          const batch = movies.slice(i, i + batchSize);
-          const batchPromises = batch.map(async (movie) => {
-            try {
-              // Supabase에서 영화 정보 조회
-              const { data } = await supabase
-                .from("movies")
-                .select("poster_path")
-                .eq("id", movie.movieCd)
-                .single();
+      for (const movie of movies) {
+        try {
+          const { data } = await supabase
+            .from("movies")
+            .select("poster_path")
+            .eq("id", movie.movieCd)
+            .single();
 
-              const posterPath =
-                data?.poster_path || "/default-movie-image.jpg";
-              newPosters[movie.movieCd] = posterPath;
-              return {
-                ...movie,
-                poster_path: posterPath,
-              };
-            } catch (err) {
-              console.error(`포스터 정보 조회 실패 (${movie.movieNm}):`, err);
-              newPosters[movie.movieCd] = "/default-movie-image.jpg";
-              return {
-                ...movie,
-                poster_path: "/default-movie-image.jpg",
-              };
-            }
+          moviesWithPosters.push({
+            ...movie,
+            poster_path: data?.poster_path || "/default-movie-image.jpg",
           });
-
-          await Promise.all(batchPromises);
+        } catch {
+          moviesWithPosters.push({
+            ...movie,
+            poster_path: "/default-movie-image.jpg",
+          });
         }
-
-        // 모든 영화에 포스터 정보 적용
-        return movies.map((movie) => ({
-          ...movie,
-          poster_path: newPosters[movie.movieCd] || "/default-movie-image.jpg",
-        }));
-      } catch (err) {
-        console.error("포스터 정보 조회 중 오류:", err);
-        return movies.map((movie) => ({
-          ...movie,
-          poster_path: "/default-movie-image.jpg",
-        }));
       }
+
+      return moviesWithPosters;
     },
     [supabase]
   );
 
-  // 메모이제이션된 함수로 변경
   const fetchMovies = useCallback(async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       setError(null);
 
-      // 데이터만 가져오는 API 호출
       const res = await fetch("/api/kobis", {
-        next: { revalidate: 3600 }, // 1시간마다 재검증
+        next: { revalidate: 3600 },
       });
 
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error("Failed to fetch movies:", errorText);
-        setError("영화 데이터를 가져오는데 실패했습니다.");
-        return;
+        throw new Error("영화 데이터를 가져오는데 실패했습니다.");
       }
 
-      let data;
-      try {
-        data = await res.json();
-      } catch (err) {
-        console.error("JSON 파싱 오류:", err);
-        setError("데이터 형식이 올바르지 않습니다.");
-        return;
-      }
-
-      if (!data || !data.movies || !Array.isArray(data.movies)) {
-        console.error("Invalid data format:", data);
-        setError("데이터 형식이 올바르지 않습니다.");
-        return;
-      }
-
-      const kobisData = data.movies;
-
-      // Supabase에서 포스터 정보 가져오기
-      const moviesWithPosters = await fetchMoviePosters(kobisData);
-
+      const data = await res.json();
+      const moviesWithPosters = await fetchMoviePosters(data.movies);
       setMovies(moviesWithPosters);
     } catch (error) {
-      console.error("Error fetching movies:", error);
-      setError("영화 데이터를 가져오는데 실패했습니다.");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "영화 데이터를 가져오는데 실패했습니다."
+      );
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }, [fetchMoviePosters]);
 
@@ -156,7 +104,6 @@ export function MovieList() {
     fetchMovies();
   }, [fetchMovies]);
 
-  // 오류 발생 시 표시
   if (error) {
     return (
       <div className="p-4 text-center text-red-500">
@@ -171,8 +118,7 @@ export function MovieList() {
     );
   }
 
-  // 로딩 상태일 때 스켈레톤 UI 표시
-  if (loading && movies.length === 0) {
+  if (isLoading) {
     return (
       <div className="relative">
         <Swiper
@@ -182,12 +128,8 @@ export function MovieList() {
           navigation
           pagination={{ clickable: true }}
           breakpoints={{
-            640: {
-              slidesPerView: 2,
-            },
-            1024: {
-              slidesPerView: 3,
-            },
+            640: { slidesPerView: 2 },
+            1024: { slidesPerView: 3 },
           }}
           className="mySwiper"
         >
@@ -195,25 +137,12 @@ export function MovieList() {
             .fill(0)
             .map((_, index) => (
               <SwiperSlide key={`skeleton-${index}`}>
-                <MovieItemSkeleton />
+                <div className="p-4">
+                  <MovieSkeleton />
+                </div>
               </SwiperSlide>
             ))}
         </Swiper>
-      </div>
-    );
-  }
-
-  // 영화가 없는 경우
-  if (movies.length === 0) {
-    return (
-      <div className="p-4 text-center text-gray-500">
-        <p>표시할 영화가 없습니다.</p>
-        <button
-          onClick={fetchMovies}
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          다시 시도
-        </button>
       </div>
     );
   }
@@ -227,12 +156,8 @@ export function MovieList() {
         navigation
         pagination={{ clickable: true }}
         breakpoints={{
-          640: {
-            slidesPerView: 2,
-          },
-          1024: {
-            slidesPerView: 3,
-          },
+          640: { slidesPerView: 2 },
+          1024: { slidesPerView: 3 },
         }}
         className="mySwiper"
       >

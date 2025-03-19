@@ -12,45 +12,35 @@ export default function TabNavigation({
   onTabChange,
 }: TabNavigationProps) {
   return (
-    <div className="border-b mb-6">
-      <nav className="flex space-x-4">
+    <div className="border-b border-gray-200">
+      <nav className="-mb-px flex space-x-8">
         <button
           onClick={() => onTabChange("reviews")}
-          className={`py-2 px-4 ${
+          className={`${
             activeTab === "reviews"
-              ? "border-b-2 border-blue-500 text-blue-500"
-              : "text-gray-500"
-          }`}
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+          } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
         >
           내 리뷰
         </button>
         <button
-          onClick={() => onTabChange("replies")}
-          className={`py-2 px-4 ${
-            activeTab === "replies"
-              ? "border-b-2 border-blue-500 text-blue-500"
-              : "text-gray-500"
-          }`}
-        >
-          내 답글
-        </button>
-        <button
           onClick={() => onTabChange("favorites")}
-          className={`py-2 px-4 ${
+          className={`${
             activeTab === "favorites"
-              ? "border-b-2 border-blue-500 text-blue-500"
-              : "text-gray-500"
-          }`}
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+          } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
         >
           즐겨찾기
         </button>
         <button
           onClick={() => onTabChange("profile")}
-          className={`py-2 px-4 ${
+          className={`${
             activeTab === "profile"
-              ? "border-b-2 border-blue-500 text-blue-500"
-              : "text-gray-500"
-          }`}
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+          } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
         >
           프로필 설정
         </button>

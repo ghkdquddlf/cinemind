@@ -1,36 +1,14 @@
-export type TabType = "reviews" | "replies" | "favorites" | "profile";
+export type TabType = "reviews" | "favorites" | "profile";
 
 export interface Review {
   id: string;
+  user_id: string;
   movie_id: string;
-  author: string;
   content: string;
-  rating?: number;
+  rating: number;
   created_at: string;
-  user_id?: string;
-  movies?: {
-    id: string;
-    title: string;
-    poster_path?: string;
-  };
-}
-
-export interface Reply {
-  id: string;
-  review_id: string;
   author: string;
-  content: string;
-  created_at: string;
-  user_id?: string;
-  reviews?: {
-    id: string;
-    content: string;
-    movie_id: string;
-    movies?: {
-      id: string;
-      title: string;
-    };
-  };
+  movie_title?: string;
 }
 
 export interface Movie {
@@ -46,6 +24,14 @@ export interface FavoriteItem {
   id: string;
   user_id: string;
   movie_id: string;
-  created_at?: string;
-  movies?: Movie;
+  created_at: string;
+  movie_title?: string;
+  poster_path?: string;
+  movies?: {
+    id: string;
+    title: string;
+    poster_path: string;
+    release_date: string;
+    description: string;
+  };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Movie } from "@/types/movie";
@@ -38,7 +38,6 @@ export function RandomMovies() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [allMovies, setAllMovies] = useState<Movie[]>([]);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const fetchMovies = useCallback(async () => {
     try {
@@ -100,96 +99,34 @@ export function RandomMovies() {
     [allMovies]
   );
 
-  const scrollGenres = (direction: "left" | "right") => {
-    if (scrollRef.current) {
-      const scrollAmount = 200;
-      const currentScroll = scrollRef.current.scrollLeft;
-      scrollRef.current.scrollTo({
-        left:
-          direction === "left"
-            ? currentScroll - scrollAmount
-            : currentScroll + scrollAmount,
-        behavior: "smooth",
-      });
-    }
-  };
-
   const genreButtons = useMemo(() => {
     return (
-      <div className="relative w-full">
-        <button
-          onClick={() => scrollGenres("left")}
-          className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white bg-opacity-80 rounded-full p-1 shadow-md hover:bg-opacity-100"
-          aria-label="왼쪽으로 스크롤"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 text-gray-700"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+      <div className="w-full">
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => handleGenreChange("all")}
+            className={`px-4 py-2 rounded-full transition-all ${
+              selectedGenre === "all"
+                ? "bg-blue-500 text-white shadow-md transform scale-105"
+                : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+            }`}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
-
-        <div
-          ref={scrollRef}
-          className="w-full overflow-x-auto py-2 px-8 scrollbar-hide"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-        >
-          <div className="flex gap-2 min-w-max">
+            전체
+          </button>
+          {genres.map((genre) => (
             <button
-              onClick={() => handleGenreChange("all")}
+              key={genre}
+              onClick={() => handleGenreChange(genre)}
               className={`px-4 py-2 rounded-full transition-all ${
-                selectedGenre === "all"
+                selectedGenre === genre
                   ? "bg-blue-500 text-white shadow-md transform scale-105"
                   : "bg-gray-100 text-gray-800 hover:bg-gray-200"
               }`}
             >
-              전체
+              {genre}
             </button>
-            {genres.map((genre) => (
-              <button
-                key={genre}
-                onClick={() => handleGenreChange(genre)}
-                className={`px-4 py-2 rounded-full transition-all ${
-                  selectedGenre === genre
-                    ? "bg-blue-500 text-white shadow-md transform scale-105"
-                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                }`}
-              >
-                {genre}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
-
-        <button
-          onClick={() => scrollGenres("right")}
-          className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white bg-opacity-80 rounded-full p-1 shadow-md hover:bg-opacity-100"
-          aria-label="오른쪽으로 스크롤"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 text-gray-700"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
       </div>
     );
   }, [genres, selectedGenre, handleGenreChange]);

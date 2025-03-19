@@ -6,10 +6,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { TabType, Review, Reply, FavoriteItem } from "./types";
+import { TabType, Review, FavoriteItem } from "./types";
 import TabNavigation from "./components/TabNavigation";
 import ReviewsTab from "./components/ReviewsTab";
-import RepliesTab from "./components/RepliesTab";
 import FavoritesTab from "./components/FavoritesTab";
 import ProfileTab from "./components/ProfileTab";
 
@@ -17,7 +16,6 @@ export default function MyPage() {
   const { user, isAuthenticated, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>("reviews");
   const [myReviews, setMyReviews] = useState<Review[]>([]);
-  const [myReplies, setMyReplies] = useState<Reply[]>([]);
   const [favoriteMovies, setFavoriteMovies] = useState<FavoriteItem[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -158,122 +156,6 @@ export default function MyPage() {
         console.error("오류 상세 정보:", JSON.stringify(err));
       }
       setError("리뷰를 불러오는데 실패했습니다.");
-    } finally {
-      setLoadingData(false);
-    }
-  };
-
-  // 내 답글 가져오기
-  const fetchMyReplies = async () => {
-    if (!user) return;
-
-    setLoadingData(true);
-    setError(null);
-
-    try {
-      const supabase = createClient();
-
-      console.log("답글 조회 - 사용자 정보:", {
-        id: user.id,
-        email: user.email,
-      });
-
-      // user_id로 조회 시도 - 외래 키 관계 없이 기본 필드만 조회
-      const { data: idData, error: idError } = await supabase
-        .from("review_replies")
-        .select("*")
-        .eq("user_id", user.id);
-
-      if (idError) {
-        console.error("user_id로 답글 조회 중 오류:", idError);
-      } else {
-        console.log("user_id로 조회한 답글 결과:", idData);
-
-        // 리뷰 정보 별도 조회
-        if (idData && idData.length > 0) {
-          const reviewIds = idData.map((reply) => reply.review_id);
-          const { data: reviewsData, error: reviewsError } = await supabase
-            .from("reviews")
-            .select("*")
-            .in("id", reviewIds);
-
-          if (reviewsError) {
-            console.error("답글 관련 리뷰 정보 조회 중 오류:", reviewsError);
-          } else {
-            // 답글 데이터에 리뷰 정보 추가
-            idData.forEach((reply) => {
-              const review = reviewsData?.find((r) => r.id === reply.review_id);
-              if (review) {
-                reply.reviews = review;
-              }
-            });
-          }
-        }
-      }
-
-      // author(이메일)로 조회 시도 - 외래 키 관계 없이 기본 필드만 조회
-      const { data: authorData, error: authorError } = await supabase
-        .from("review_replies")
-        .select("*")
-        .eq("author", user.email);
-
-      if (authorError) {
-        console.error("author로 답글 조회 중 오류:", authorError);
-      } else {
-        console.log("author로 조회한 답글 결과:", authorData);
-
-        // 리뷰 정보 별도 조회
-        if (authorData && authorData.length > 0) {
-          const reviewIds = authorData.map((reply) => reply.review_id);
-          const { data: reviewsData, error: reviewsError } = await supabase
-            .from("reviews")
-            .select("*")
-            .in("id", reviewIds);
-
-          if (reviewsError) {
-            console.error("답글 관련 리뷰 정보 조회 중 오류:", reviewsError);
-          } else {
-            // 답글 데이터에 리뷰 정보 추가
-            authorData.forEach((reply) => {
-              const review = reviewsData?.find((r) => r.id === reply.review_id);
-              if (review) {
-                reply.reviews = review;
-              }
-            });
-          }
-        }
-      }
-
-      if (idError && authorError) {
-        throw new Error(
-          `ID 조회 오류: ${JSON.stringify(
-            idError
-          )}, 이메일 조회 오류: ${JSON.stringify(authorError)}`
-        );
-      }
-
-      // 두 결과 병합 (중복 제거)
-      const combinedData = [...(idData || [])];
-
-      // authorData에서 id가 combinedData에 없는 항목만 추가
-      if (authorData) {
-        authorData.forEach((reply) => {
-          if (!combinedData.some((r) => r.id === reply.id)) {
-            combinedData.push(reply);
-          }
-        });
-      }
-
-      setMyReplies(combinedData);
-      console.log("최종 병합된 답글 데이터:", combinedData);
-    } catch (err) {
-      console.error("내 답글을 가져오는 중 오류 발생:", err);
-      if (err instanceof Error) {
-        console.error("오류 메시지:", err.message);
-      } else {
-        console.error("오류 상세 정보:", JSON.stringify(err));
-      }
-      setError("답글을 불러오는데 실패했습니다.");
     } finally {
       setLoadingData(false);
     }
@@ -430,22 +312,44 @@ export default function MyPage() {
     }
   };
 
-  // 탭 변경 시 데이터 로드
   useEffect(() => {
-    if (!isAuthenticated || !user) return;
-
-    if (activeTab === "reviews") {
-      fetchMyReviews();
-    } else if (activeTab === "replies") {
-      fetchMyReplies();
-    } else if (activeTab === "favorites") {
-      fetchFavoriteMovies();
-    } else if (activeTab === "profile") {
+    if (isAuthenticated && user) {
       fetchUserProfile();
+      if (activeTab === "reviews") {
+        fetchMyReviews();
+      } else if (activeTab === "favorites") {
+        fetchFavoriteMovies();
+      }
     }
-  }, [activeTab, isAuthenticated, user]);
+  }, [isAuthenticated, user, activeTab]);
 
-  // 리뷰 삭제 핸들러
+  if (loading) {
+    return (
+      <div className="container mx-auto p-4">
+        <Skeleton height={40} className="mb-4" />
+        <Skeleton count={3} height={100} className="mb-2" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="container mx-auto p-4 text-center">
+        <h1 className="text-2xl font-bold mb-4">로그인이 필요합니다</h1>
+        <Link
+          href="/auth/login"
+          className="text-blue-500 hover:text-blue-700 underline"
+        >
+          로그인하러 가기
+        </Link>
+      </div>
+    );
+  }
+
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+  };
+
   const handleDeleteReview = async (reviewId: string) => {
     if (!confirm("정말로 이 리뷰를 삭제하시겠습니까?")) return;
 
@@ -470,32 +374,6 @@ export default function MyPage() {
     }
   };
 
-  // 답글 삭제 핸들러
-  const handleDeleteReply = async (replyId: string) => {
-    if (!confirm("정말로 이 답글을 삭제하시겠습니까?")) return;
-
-    try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("review_replies")
-        .delete()
-        .eq("id", replyId);
-
-      if (error) {
-        throw error;
-      }
-
-      // 답글 목록 갱신
-      fetchMyReplies();
-      alert("답글이 삭제되었습니다.");
-    } catch (err) {
-      alert(
-        err instanceof Error ? err.message : "답글 삭제 중 오류가 발생했습니다."
-      );
-    }
-  };
-
-  // 즐겨찾기 삭제 핸들러
   const handleRemoveFavorite = (movieId: string) => {
     try {
       const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
@@ -511,66 +389,15 @@ export default function MyPage() {
     }
   };
 
-  // 로딩 중이거나 인증되지 않은 경우
-  if (loading || (!isAuthenticated && !loading)) {
-    return (
-      <div className="container mx-auto p-4 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          {loading ? (
-            <div className="w-full max-w-md mx-auto">
-              <Skeleton height={40} width="60%" className="mb-4 mx-auto" />
-              <Skeleton height={20} width="80%" className="mb-2 mx-auto" />
-              <Skeleton height={20} width="70%" className="mb-4 mx-auto" />
-              <Skeleton height={40} width={120} className="mx-auto" />
-            </div>
-          ) : (
-            <div>
-              <p className="text-xl mb-4">로그인이 필요한 페이지입니다.</p>
-              <Link
-                href="/auth/login?redirect=/mypage"
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-              >
-                로그인하러 가기
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">마이페이지</h1>
+      <h1 className="text-2xl font-bold mb-6">
+        {nickname ? `${nickname}님의 페이지` : "마이페이지"}
+      </h1>
 
-      {/* 사용자 정보 요약 */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-gray-500">
-            {user?.email?.charAt(0).toUpperCase() || "U"}
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold">{user?.email}</h2>
-            <p className="text-gray-500">
-              가입일: {new Date(user?.created_at || "").toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-      </div>
+      <TabNavigation activeTab={activeTab} onTabChange={handleTabChange} />
 
-      {/* 탭 메뉴 */}
-      <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-
-      {/* 오류 메시지 */}
-      {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
-          {error}
-        </div>
-      )}
-
-      {/* 탭 내용 */}
       <div className="mt-6">
-        {/* 내 리뷰 탭 */}
         {activeTab === "reviews" && (
           <ReviewsTab
             reviews={myReviews}
@@ -579,18 +406,6 @@ export default function MyPage() {
             onDeleteReview={handleDeleteReview}
           />
         )}
-
-        {/* 내 답글 탭 */}
-        {activeTab === "replies" && (
-          <RepliesTab
-            replies={myReplies}
-            loading={loadingData}
-            error={error}
-            onDeleteReply={handleDeleteReply}
-          />
-        )}
-
-        {/* 즐겨찾기 탭 */}
         {activeTab === "favorites" && (
           <FavoritesTab
             favorites={favoriteMovies}
@@ -599,11 +414,7 @@ export default function MyPage() {
             onRemoveFavorite={handleRemoveFavorite}
           />
         )}
-
-        {/* 프로필 설정 탭 */}
-        {activeTab === "profile" && (
-          <ProfileTab user={user} initialNickname={nickname} />
-        )}
+        {activeTab === "profile" && <ProfileTab user={user} />}
       </div>
     </div>
   );

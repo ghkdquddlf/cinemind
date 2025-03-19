@@ -92,7 +92,6 @@ export function AllMovies() {
   // 페이지 변경 핸들러
   const handlePageChange = (newPage: number) => {
     setPagination((prev) => ({ ...prev, page: newPage }));
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
