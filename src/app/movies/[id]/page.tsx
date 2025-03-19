@@ -36,7 +36,6 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   };
 }
 
-// 정적 경로 생성 (SSG)
 export async function generateStaticParams() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -55,8 +54,7 @@ export async function generateStaticParams() {
   }));
 }
 
-// 페이지 재검증 설정 (ISR)
-export const revalidate = 3600; // 1시간마다 재검증
+export const revalidate = 86400;
 
 // 영화 정보 스켈레톤 컴포넌트
 const MovieInfoSkeleton = () => {

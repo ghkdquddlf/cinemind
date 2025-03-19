@@ -14,9 +14,13 @@ CineMind는 영화 리뷰 및 정보 공유 플랫폼으로, 사용자들이 영
 - **일별 박스오피스**: 실시간으로 업데이트되는 일별 박스오피스 정보 제공
 - **장르별 영화 탐색**: 다양한 장르별로 영화를 필터링하여 탐색 가능
 - **영화 상세 정보**: 영화의 상세 정보, 출연진, 줄거리 등 제공
-- **리뷰 및 댓글**: 영화에 대한 리뷰 작성 및 다른 사용자의 리뷰에 댓글 작성 가능
+- **리뷰 시스템**
+  - 영화별 평점과 리뷰 작성
+  - 리뷰 수정 및 삭제 기능
+  - 사용자별 리뷰 관리
+  - 리뷰 작성 시 실시간 상태 업데이트
 - **즐겨찾기**: 관심 있는 영화를 즐겨찾기에 추가하여 쉽게 접근 가능
-- **마이페이지**: 사용자의 리뷰, 댓글, 즐겨찾기 영화를 한 곳에서 관리
+- **마이페이지**: 사용자의 리뷰, 즐겨찾기 영화를 한 곳에서 관리
 - **다크모드**: 사용자 환경에 맞는 테마 선택 가능
 
 ## 🛠️ 기술 스택
@@ -28,6 +32,12 @@ CineMind는 영화 리뷰 및 정보 공유 플랫폼으로, 사용자들이 영
 - **TypeScript**: 타입 안전성 확보
 - **Tailwind CSS**: 반응형 디자인 및 UI 스타일링
 - **next-themes**: 다크모드 구현
+
+### 상태 관리
+
+- **React Hooks**: useState, useEffect를 활용한 로컬 상태 관리
+- **Custom Hooks**: useAuth, useUserProfile 등 재사용 가능한 상태 로직
+- **Props와 Callback**: 컴포넌트 간 상태 및 이벤트 전달
 
 ### 백엔드
 
@@ -67,11 +77,19 @@ yarn install
    `.env.local` 파일을 생성하고 다음 변수들을 설정합니다:
 
 ```
+# Supabase 설정
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# API 키
 KOBIS_API_KEY=your_kobis_api_key
 KMDB_API_KEY=your_kmdb_api_key
+
+# 관리자 설정
+ADMIN_EMAILS=your_admin_emails  # 콤마(,)로 구분하여 여러 관리자 이메일 설정 가능
 ```
+
+> ⚠️ **중요**: 환경 변수 파일(.env.local)은 절대로 Git에 커밋하지 마세요. 보안을 위해 항상 .gitignore에 포함되어야 합니다.
 
 4. 개발 서버 실행
 
@@ -94,9 +112,16 @@ cinemind/
 │   │   ├── admin/      # 관리자 페이지
 │   │   ├── api/        # API 라우트
 │   │   ├── auth/       # 인증 관련 페이지
-│   │   ├── components/ # 공통 컴포넌트
 │   │   ├── movies/     # 영화 관련 페이지
+│   │   │   └── [id]/   # 영화 상세 페이지
+│   │   │       ├── components/
+│   │   │       │   ├── ReviewForm.tsx    # 리뷰 작성 폼
+│   │   │       │   ├── ReviewList.tsx    # 리뷰 목록 표시
+│   │   │       │   └── ReplyList.tsx     # 댓글 목록 표시
 │   │   └── mypage/     # 마이페이지
+│   │       ├── components/
+│   │       │   └── ReviewsTab.tsx        # 사용자 리뷰 탭
+│   │       └── types.ts                  # 마이페이지 관련 타입 정의
 │   ├── components/     # 전역 컴포넌트
 │   ├── lib/            # 유틸리티 함수 및 훅
 │   └── types/          # TypeScript 타입 정의
@@ -112,6 +137,25 @@ cinemind/
 - **ISR (Incremental Static Regeneration)**: 주기적으로 업데이트가 필요한 페이지에 적용
 - **SSR (Server-Side Rendering)**: 사용자별 개인화된 데이터가 필요한 페이지에 적용
 - **Streaming**: 점진적 페이지 로딩으로 사용자 경험 향상
+
+### 데이터 관리 및 상태 처리
+
+- **에러 처리**:
+
+  - 사용자 친화적인 에러 메시지
+  - 적절한 에러 바운더리 설정
+  - 네트워크 요청 실패 시 폴백 UI
+
+- **상태 관리 전략**:
+
+  - 컴포넌트 단위의 로컬 상태 관리
+  - Props를 통한 상태 공유
+  - 커스텀 훅을 통한 재사용 가능한 상태 로직
+
+- **타입 시스템**:
+  - TypeScript를 활용한 타입 안전성 확보
+  - 인터페이스를 통한 데이터 구조 정의
+  - 재사용 가능한 타입 정의
 
 ### 성능 최적화
 
@@ -129,6 +173,6 @@ cinemind/
 
 - [황병일](https://github.com/ghkdquddlf) - 개발자
 
-## 📞 연락처 - xhdlapdlxm12@naver.com
+## 📞 연락처
 
 프로젝트에 관한 질문이나 제안이 있으시면 [xhdlapdlxm12@naver.com](mailto:xhdlapdlxm12@naver.com)로 연락주세요.

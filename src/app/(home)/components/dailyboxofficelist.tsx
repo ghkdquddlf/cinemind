@@ -79,7 +79,7 @@ export function MovieList() {
       setError(null);
 
       const res = await fetch("/api/kobis", {
-        next: { revalidate: 3600 },
+        next: { revalidate: 86400 },
       });
 
       if (!res.ok) {

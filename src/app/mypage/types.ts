@@ -9,6 +9,13 @@ export interface Review {
   created_at: string;
   author: string;
   movie_title?: string;
+  movies?: {
+    id: string;
+    title: string;
+    poster_path: string;
+    release_date: string;
+    description: string;
+  };
 }
 
 export interface Movie {

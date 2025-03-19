@@ -10,7 +10,7 @@ export const metadata = {
   description: "최신 영화 정보와 다양한 생각을 공유하세요",
 };
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 const BoxOfficeSkeleton = () => {
   return (

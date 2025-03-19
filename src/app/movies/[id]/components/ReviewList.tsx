@@ -30,7 +30,6 @@ export default function ReviewList({
   const { user } = useAuth(); // 사용자 정보
   const [reviews, setReviews] = useState<Review[]>(initialReviews || []); // 리뷰 목록
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null); // 수정 중인 리뷰 ID
-  const [isLoading, setIsLoading] = useState(false); // 로딩 상태
   const [editContent, setEditContent] = useState(""); // 수정 중인 리뷰 내용
   const [isSubmitting, setIsSubmitting] = useState(false); // 제출 상태
 
@@ -43,21 +42,15 @@ export default function ReviewList({
 
   // 리뷰 목록 가져오기
   const fetchReviews = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`/api/movies/${movieId}/reviews`);
+    const response = await fetch(`/api/movies/${movieId}/reviews`);
 
-      if (!response.ok) {
-        throw new Error("리뷰를 가져오는데 실패했습니다.");
-      }
-
-      const data = await response.json();
-      setReviews(data.reviews || []);
-    } catch (error) {
-      console.error("Error fetching reviews:", error);
-    } finally {
-      setIsLoading(false);
+    if (!response.ok) {
+      console.error("리뷰를 가져오는데 실패했습니다.");
+      return;
     }
+
+    const data = await response.json();
+    setReviews(data.reviews || []);
   };
 
   // 리뷰 삭제 처리
@@ -66,27 +59,18 @@ export default function ReviewList({
       return;
     }
 
-    try {
-      setIsLoading(true);
-      const response = await fetch(
-        `/api/movies/${movieId}/reviews/${reviewId}`,
-        {
-          method: "DELETE",
-        }
-      );
+    const response = await fetch(`/api/movies/${movieId}/reviews/${reviewId}`, {
+      method: "DELETE",
+    });
 
-      if (!response.ok) {
-        throw new Error("리뷰 삭제에 실패했습니다.");
-      }
-
-      setReviews(reviews.filter((review) => review.id !== reviewId));
-      onReviewDeleted?.();
-      alert("리뷰가 삭제되었습니다.");
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "오류가 발생했습니다.");
-    } finally {
-      setIsLoading(false);
+    if (!response.ok) {
+      alert("리뷰 삭제에 실패했습니다.");
+      return;
     }
+
+    setReviews(reviews.filter((review) => review.id !== reviewId));
+    onReviewDeleted?.();
+    alert("리뷰가 삭제되었습니다.");
   };
 
   // 리뷰 수정 시작
@@ -106,36 +90,33 @@ export default function ReviewList({
     e.preventDefault();
     setIsSubmitting(true);
 
-    try {
-      const response = await fetch(
-        `/api/movies/${movieId}/reviews/${editingReviewId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ content: editContent }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("리뷰 수정에 실패했습니다.");
+    const response = await fetch(
+      `/api/movies/${movieId}/reviews/${editingReviewId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content: editContent }),
       }
+    );
 
-      const data = await response.json();
-      setReviews(
-        reviews.map((review) =>
-          review.id === editingReviewId ? data.review : review
-        )
-      );
-
-      handleCancelEdit();
-      alert("리뷰가 성공적으로 수정되었습니다.");
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "오류가 발생했습니다.");
-    } finally {
+    if (!response.ok) {
       setIsSubmitting(false);
+      alert("리뷰 수정에 실패했습니다.");
+      return;
     }
+
+    const data = await response.json();
+    setReviews(
+      reviews.map((review) =>
+        review.id === editingReviewId ? data.review : review
+      )
+    );
+
+    handleCancelEdit();
+    setIsSubmitting(false);
+    alert("리뷰가 성공적으로 수정되었습니다.");
   };
 
   // 현재 사용자가 리뷰 작성자인지 확인
@@ -229,18 +210,6 @@ export default function ReviewList({
       </form>
     </div>
   );
-
-  // 로딩 중 UI
-  if (isLoading) {
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-        <h2 className="text-2xl font-bold mb-6">리뷰 로딩 중...</h2>
-        <div className="flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      </div>
-    );
-  }
 
   // 메인 UI 렌더링
   return (

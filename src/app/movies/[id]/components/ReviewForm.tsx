@@ -10,7 +10,6 @@ interface ReviewFormProps {
   movieId: string; // 영화 ID
   initialContent?: string; // 초기 리뷰 내용 (수정 시 사용)
   initialRating?: number; // 초기 평점 (기본값: 5)
-  onSubmitSuccess?: () => void; // 리뷰 제출 성공 시 실행할 콜백
 }
 
 // 로그인이 필요할 때 표시되는 컴포넌트
@@ -100,7 +99,6 @@ export default function ReviewForm({
   movieId,
   initialContent = "",
   initialRating = 5,
-  onSubmitSuccess,
 }: ReviewFormProps) {
   // 상태 관리
   const { user, isAuthenticated } = useAuth(); // 사용자 인증 정보
@@ -114,49 +112,40 @@ export default function ReviewForm({
     e.preventDefault();
     if (!isAuthenticated || !user) return;
 
-    try {
-      setIsSubmitting(true);
-      // 리뷰 데이터 준비
-      const userNickname = getUserNickname();
-      const reviewData = {
-        content,
-        rating,
-        author: userNickname,
-        user_id: user.id,
-      };
+    setIsSubmitting(true);
 
-      // API 요청 전송
-      const response = await fetch(`/api/movies/${movieId}/reviews`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(reviewData),
-      });
+    // 리뷰 데이터 준비
+    const userNickname = getUserNickname();
+    const reviewData = {
+      content,
+      rating,
+      author: userNickname,
+      user_id: user.id,
+    };
 
-      const data = await response.json();
+    // API 요청 전송
+    const response = await fetch(`/api/movies/${movieId}/reviews`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(reviewData),
+    });
 
-      if (!response.ok) {
-        throw new Error(data.error || "리뷰 작성에 실패했습니다.");
-      }
+    const data = await response.json();
 
-      // 성공 처리
-      setContent("");
-      setRating(5);
-      alert("리뷰가 등록되었습니다.");
+    setIsSubmitting(false);
 
-      if (onSubmitSuccess) {
-        onSubmitSuccess();
-      } else {
-        window.location.reload();
-      }
-    } catch (err) {
-      alert(
-        err instanceof Error ? err.message : "리뷰 작성 중 오류가 발생했습니다."
-      );
-    } finally {
-      setIsSubmitting(false);
+    if (!response.ok) {
+      alert(data.error || "리뷰 작성에 실패했습니다.");
+      return;
     }
+
+    // 성공 처리
+    setContent("");
+    setRating(5);
+    alert("리뷰가 등록되었습니다.");
+    window.location.reload();
   };
 
   // 컴포넌트 렌더링

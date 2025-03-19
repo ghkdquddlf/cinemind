@@ -44,7 +44,7 @@ export function RandomMovies() {
       setLoading(true);
       setError(null);
       const response = await fetch("/api/movies", {
-        next: { revalidate: 3600 },
+        next: { revalidate: 86400 },
       });
       const data = await response.json();
 
