@@ -10,7 +10,7 @@ const MYPAGE_PATHS = ["/mypage"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const { supabase, response } = createClient(request);
+  const { supabase } = createClient(request);
 
   // 세션 확인
   const {
@@ -35,7 +35,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  return response;
+  return NextResponse.next();
 }
 
 // 미들웨어가 실행될 경로 설정

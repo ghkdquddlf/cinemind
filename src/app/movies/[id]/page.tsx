@@ -6,14 +6,11 @@ import ReviewForm from "./components/ReviewForm";
 import ReviewList from "./components/ReviewList";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import { createClient } from "@/lib/supabase/client";
 
 // 페이지 메타데이터 동적 생성
 export async function generateMetadata({ params }: { params: { id: string } }) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const { createClient } = await import("@supabase/supabase-js");
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const supabase = createClient();
 
   const { data: movie } = await supabase
     .from("movies")
@@ -37,11 +34,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 }
 
 export async function generateStaticParams() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const { createClient } = await import("@supabase/supabase-js");
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const supabase = createClient();
 
   const { data: movies } = await supabase
     .from("movies")
@@ -116,11 +109,7 @@ export default async function MoviePage({
 }: {
   params: { id: string };
 }) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const { createClient } = await import("@supabase/supabase-js");
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const supabase = createClient();
 
   const { data: movie, error } = await supabase
     .from("movies")

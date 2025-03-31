@@ -38,40 +38,38 @@ const MovieSkeleton = () => (
   </div>
 );
 
+const supabase = createClient();
+
 export function MovieList() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClient();
 
-  const fetchMoviePosters = useCallback(
-    async (movies: Movie[]) => {
-      const moviesWithPosters = [];
+  const fetchMoviePosters = useCallback(async (movies: Movie[]) => {
+    const moviesWithPosters = [];
 
-      for (const movie of movies) {
-        try {
-          const { data } = await supabase
-            .from("movies")
-            .select("poster_path")
-            .eq("id", movie.movieCd)
-            .single();
+    for (const movie of movies) {
+      try {
+        const { data } = await supabase
+          .from("movies")
+          .select("poster_path")
+          .eq("id", movie.movieCd)
+          .single();
 
-          moviesWithPosters.push({
-            ...movie,
-            poster_path: data?.poster_path || "/default-movie-image.jpg",
-          });
-        } catch {
-          moviesWithPosters.push({
-            ...movie,
-            poster_path: "/default-movie-image.jpg",
-          });
-        }
+        moviesWithPosters.push({
+          ...movie,
+          poster_path: data?.poster_path || "/default-movie-image.jpg",
+        });
+      } catch {
+        moviesWithPosters.push({
+          ...movie,
+          poster_path: "/default-movie-image.jpg",
+        });
       }
+    }
 
-      return moviesWithPosters;
-    },
-    [supabase]
-  );
+    return moviesWithPosters;
+  }, []);
 
   const fetchMovies = useCallback(async () => {
     try {
@@ -83,18 +81,18 @@ export function MovieList() {
       });
 
       if (!res.ok) {
-        throw new Error("영화 데이터를 가져오는데 실패했습니다.");
+        throw new Error(`HTTP 에러: ${res.status}`);
       }
 
       const data = await res.json();
       const moviesWithPosters = await fetchMoviePosters(data.movies);
       setMovies(moviesWithPosters);
     } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "영화 데이터를 가져오는데 실패했습니다."
-      );
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("영화 데이터를 가져오는데 실패했습니다.");
+      }
     } finally {
       setIsLoading(false);
     }
