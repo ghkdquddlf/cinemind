@@ -21,13 +21,13 @@ export default function BoxOfficeResults({ results }: BoxOfficeResultsProps) {
               <span className="font-medium">{result.title}</span>
               {result.type === "조회만 함" ? (
                 <span className="text-blue-500 ml-2">
-                  ℹ️ 조회만 함 (순위: {result.rank})
+                  조회만 함 (순위: {result.rank})
                 </span>
               ) : result.success ? (
-                <span className="text-green-500 ml-2">✓ 저장 성공</span>
+                <span className="text-green-500 ml-2"> 저장 성공</span>
               ) : (
                 <span className="text-red-500 ml-2">
-                  ✗ 저장 실패: {result.error}
+                  저장 실패: {result.error}
                 </span>
               )}
             </li>

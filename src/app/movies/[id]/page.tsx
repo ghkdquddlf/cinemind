@@ -27,9 +27,16 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 
   return {
     title: `${movie.title} - CineMind`,
-    description: movie.overview
-      ? movie.overview.substring(0, 160)
-      : "영화 상세 정보 및 리뷰를 확인하세요.",
+    description: movie.description,
+    openGraph: {
+      title: `${movie.title} - CineMind`,
+      description: movie.description,
+      images: [
+        {
+          url: movie.poster_path || "/default-movie-image.jpg",
+        },
+      ],
+    },
   };
 }
 
